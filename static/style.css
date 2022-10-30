@@ -1,0 +1,26 @@
+html, body {
+    background-color:pink;
+    width:100%;
+    height:100%;
+    padding:0;
+    margin:0;
+}
+
+#loadingDiv {
+    font-size: 4rem;
+    text-align: center;
+    background-color: red;
+    color:white;
+}
+
+#terminal {
+    background-color:black;
+    font-family: courier,monospace;
+    color:white;
+    width:100%;
+    height:100%;
+    margin: 0;
+    padding:.5rem;
+    font-size:2rem;
+    white-space: pre-wrap;
+}
