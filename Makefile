@@ -13,8 +13,7 @@ EXECUTABLE_PATH = $(DIST_DIR)/$(EXECUTABLE_NAME)
 CXXFLAGS = -Wall -Wextra -fexceptions 
 OBJECTS = $(addprefix $(OBJ_DIR)/,main.o commands.o js_bindings.o shell.o)
 LINK_FLAGS = --preload-file assets -s \
-			 EXPORTED_RUNTIME_METHODS="['ccall']" -s ALLOW_MEMORY_GROWTH \
-			 -s MAXIMUM_MEMORY=500MB
+			 EXPORTED_RUNTIME_METHODS="['ccall']" 
 
 # Build recipe
 $(EXECUTABLE_NAME): $(OBJ_DIR) $(OBJECTS)

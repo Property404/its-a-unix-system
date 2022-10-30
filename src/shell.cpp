@@ -1,5 +1,6 @@
 #include "shell.h"
 
+#include <filesystem>
 #include <stack>
 #include <stdexcept>
 #include <variant>
@@ -52,7 +53,8 @@ std::vector<Token> tokenize(std::string&& source) {
                 quote = QuoteType::Double;
                 continue;
             }
-            if (c == ' ' || c == '\t' || c == '\n' || c == '|') {
+            if (c == ' ' || c == '\t' || c == '\n' || c == '|' ||
+                c == '>') {
                 if (!buffer.empty()) {
                     tokens.push_back(TokenType::Value(buffer));
                     buffer = "";
@@ -120,7 +122,20 @@ AstToken parse(std::vector<Token>&& tokens) {
         } else if (std::get_if<TokenType::FileRedirectOut>(&(*it))) {
             AstToken token(TokenType::FileRedirectOut{});
             token.children.push_back(root);
+
+            it++;
+            if (std::get_if<TokenType::Value>(&(*it))) {
+                token.children.emplace_back(std::move(*it));
+            } else {
+                throw std::runtime_error(
+                    "Syntax error: Redirect expects to be followed by "
+                    "file");
+            }
+            // Todo, allow other arguments and redirects to follow this
+            // redirect
+
             root = token;
+
         } else {
             throw std::runtime_error(
                 "Syntax error: unexpected token while parsing");
@@ -131,9 +146,7 @@ AstToken parse(std::vector<Token>&& tokens) {
 }
 
 int runAst(Shell* shell, AstToken root) {
-    (void)shell;
-    if (const auto* value =
-            std::get_if<TokenType::Container>(&root.type)) {
+    if (std::get_if<TokenType::Container>(&root.type)) {
         for (auto child : root.children) {
             if (const auto rv = runAst(shell, child)) {
                 return rv;
@@ -141,6 +154,7 @@ int runAst(Shell* shell, AstToken root) {
             return 0;
         }
     }
+
     if (const auto* value = std::get_if<TokenType::Command>(&root.type)) {
         auto command = value->arguments[0];
         auto result = execute_command(command, value->arguments);
@@ -151,6 +165,48 @@ int runAst(Shell* shell, AstToken root) {
             jout << command << ": command not found" << std::endl;
             return 1;
         }
+    }
+
+    if (std::get_if<TokenType::Pipe>(&root.type)) {
+        if (root.children.size() != 2) {
+            throw std::runtime_error(
+                "Syntax error: pipe('|') must have exactly two children");
+        }
+        Shell shell_child0 = *shell;
+        Shell shell_child1 = *shell;
+
+        int rv;
+        if ((rv = runAst(&shell_child0, root.children[0]))) {
+            return rv;
+        }
+        if ((rv = runAst(&shell_child1, root.children[1]))) {
+            return rv;
+        }
+        return 0;
+    }
+
+    if (std::get_if<TokenType::FileRedirectOut>(&root.type)) {
+        if (root.children.size() != 2) {
+            throw std::runtime_error(
+                "Syntax error: redirect('>') must have exactly two "
+                "children");
+        }
+
+        Shell shell_child = *shell;
+        std::filesystem::path file_path;
+        if (const auto value =
+                std::get_if<TokenType::Value>(&(root.children[1].type))) {
+            file_path = value->value;
+        } else {
+            throw std::runtime_error(
+                "Syntax error: redirect('>') expects file as second "
+                "child");
+        }
+
+        if (const auto rv = runAst(&shell_child, root.children[0])) {
+            return rv;
+        }
+        return 0;
     }
 
     throw std::runtime_error(
