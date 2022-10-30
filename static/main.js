@@ -27,13 +27,12 @@ function jsPrint(content) {
 
 document.addEventListener("keydown", (e) => {
     if ("/?'".includes(e.key)) {
-        console.log("Preventing dfeault");
         e.preventDefault();
     }
     const printable = 
         (e.keyCode > 47 && e.keyCode < 58)   || // number keys
         e.keyCode === 173 || e.keyCode === 61   || //-_+=
-        e.keyCode === 32 ||  // space
+        e.keyCode === 32 ||  e.keyCode === 59 || // space, colon
         (e.keyCode > 64 && e.keyCode < 91)   || // letter keys
         (e.keyCode > 95 && e.keyCode < 112)  || // numpad keys
         (e.keyCode > 185 && e.keyCode < 193) || // ;=,-./` (in order)
@@ -42,7 +41,6 @@ document.addEventListener("keydown", (e) => {
     if (printable) {
         context.buffer += e.key;
         addText(e.key);
-        console.log(context.buffer);
     } else {
         console.log(e);
     }
