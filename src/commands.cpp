@@ -2,39 +2,41 @@
 
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <sstream>
+#include <stdexcept>
 
-#include "js_bindings.h"
-
-static int echo(const std::vector<std::string>& args) {
+static int echo(const Shell& shell, const std::vector<std::string>& args) {
     for (auto it = args.begin() + 1; it != args.end(); it++) {
         if (it != args.begin() + 1) {
-            jout << " ";
+            *(shell.out) << " ";
         }
-        jout << *it;
+        *(shell.out) << *it;
     }
-    jout << std::endl;
+    *(shell.out) << std::endl;
     return 0;
 }
 
-static int pwd(const std::vector<std::string>& args) {
+static int pwd(const Shell& shell, const std::vector<std::string>& args) {
     (void)args;
-    jout << std::filesystem::current_path().c_str() << std::endl;
+    *(shell.out) << std::filesystem::current_path().c_str() << std::endl;
     return 0;
 }
 
-static int ls(const std::vector<std::string>& args) {
+static int ls(const Shell& shell, const std::vector<std::string>& args) {
     auto path = std::filesystem::current_path();
     if (args.size() >= 2) {
         path = args[1];
     }
     for (const auto& entry : std::filesystem::directory_iterator(path)) {
-        jout << entry.path().c_str() << std::endl;
+        *(shell.out) << entry.path().c_str() << std::endl;
     }
     return 0;
 }
 
-static int cd(const std::vector<std::string>& args) {
+static int cd(const Shell& shell, const std::vector<std::string>& args) {
+    (void)shell;
     if (args.size() >= 2) {
         std::filesystem::current_path(args[1]);
     } else {
@@ -43,21 +45,43 @@ static int cd(const std::vector<std::string>& args) {
     return 0;
 }
 
+static int cat(const Shell& shell, const std::vector<std::string>& args) {
+    for (auto it = args.begin() + 1; it != args.end(); it++) {
+        std::ifstream fp(*it);
+        std::string contents;
+        std::stringstream buffer;
+        if (fp.fail()) {
+            throw std::runtime_error("Could not open file " + *it);
+        }
+        buffer << fp.rdbuf();
+        contents = buffer.str();
+        fp.close();
+        std::string new_contents = "";
+        for (const char& c : contents) {
+            if (c != '\r') new_contents += c;
+        }
+        *(shell.out) << new_contents;
+    }
+    return 0;
+}
+
 std::optional<int> execute_command(
-    const std::string& command,
+    const Shell& shell, const std::string& command,
     const std::vector<std::string>& arguments) {
     try {
         if (command == "echo") {
-            return echo(arguments);
+            return echo(shell, arguments);
         } else if (command == "pwd") {
-            return pwd(arguments);
+            return pwd(shell, arguments);
         } else if (command == "ls") {
-            return ls(arguments);
+            return ls(shell, arguments);
         } else if (command == "cd") {
-            return cd(arguments);
+            return cd(shell, arguments);
+        } else if (command == "cat") {
+            return cat(shell, arguments);
         }
     } catch (std::exception& e) {
-        jerr << e.what() << std::endl;
+        *(shell.err) << e.what() << std::endl;
         return 1;
     }
     return {};

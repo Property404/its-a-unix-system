@@ -57,5 +57,7 @@ static CallbackOstreamBuffer jerr_buf([](const void* buf,
     return strlen(sbuf);
 });
 
-std::ostream jout(&jout_buf);
-std::ostream jerr(&jerr_buf);
+std::shared_ptr<std::ostream> jout =
+    std::make_shared<std::ostream>(&jout_buf);
+std::shared_ptr<std::ostream> jerr =
+    std::make_shared<std::ostream>(&jerr_buf);

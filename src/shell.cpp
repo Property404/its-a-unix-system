@@ -1,12 +1,13 @@
 #include "shell.h"
 
 #include <filesystem>
+#include <fstream>
+#include <memory>
 #include <stack>
 #include <stdexcept>
 #include <variant>
 
 #include "commands.h"
-#include "js_bindings.h"
 
 enum class QuoteType { None, Single, Double };
 
@@ -145,7 +146,7 @@ AstToken parse(std::vector<Token>&& tokens) {
     return root;
 }
 
-int runAst(Shell* shell, AstToken root) {
+int runAst(const Shell& shell, AstToken root) {
     if (std::get_if<TokenType::Container>(&root.type)) {
         for (auto child : root.children) {
             if (const auto rv = runAst(shell, child)) {
@@ -157,12 +158,12 @@ int runAst(Shell* shell, AstToken root) {
 
     if (const auto* value = std::get_if<TokenType::Command>(&root.type)) {
         auto command = value->arguments[0];
-        auto result = execute_command(command, value->arguments);
+        auto result = execute_command(shell, command, value->arguments);
 
         if (result) {
             return *result;
         } else {
-            jout << command << ": command not found" << std::endl;
+            *(shell.err) << command << ": command not found" << std::endl;
             return 1;
         }
     }
@@ -172,14 +173,14 @@ int runAst(Shell* shell, AstToken root) {
             throw std::runtime_error(
                 "Syntax error: pipe('|') must have exactly two children");
         }
-        Shell shell_child0 = *shell;
-        Shell shell_child1 = *shell;
+        Shell shell_child0 = shell;
+        Shell shell_child1 = shell;
 
         int rv;
-        if ((rv = runAst(&shell_child0, root.children[0]))) {
+        if ((rv = runAst(shell_child0, root.children[0]))) {
             return rv;
         }
-        if ((rv = runAst(&shell_child1, root.children[1]))) {
+        if ((rv = runAst(shell_child1, root.children[1]))) {
             return rv;
         }
         return 0;
@@ -192,7 +193,7 @@ int runAst(Shell* shell, AstToken root) {
                 "children");
         }
 
-        Shell shell_child = *shell;
+        Shell shell_child = shell;
         std::filesystem::path file_path;
         if (const auto value =
                 std::get_if<TokenType::Value>(&(root.children[1].type))) {
@@ -202,8 +203,11 @@ int runAst(Shell* shell, AstToken root) {
                 "Syntax error: redirect('>') expects file as second "
                 "child");
         }
+        std::shared_ptr<std::ofstream> stream_out =
+            std::make_shared<std::ofstream>(file_path);
+        shell_child.out = stream_out;
 
-        if (const auto rv = runAst(&shell_child, root.children[0])) {
+        if (const auto rv = runAst(shell_child, root.children[0])) {
             return rv;
         }
         return 0;
@@ -223,9 +227,9 @@ int Shell::run(std::string&& source) {
 
         auto root = parse(std::move(tokens));
 
-        return runAst(this, root);
+        return runAst(*this, root);
     } catch (std::exception& e) {
-        jerr << e.what() << std::endl;
+        *(this->err) << e.what() << std::endl;
         return 1;
     }
 }
