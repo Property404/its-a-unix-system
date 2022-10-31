@@ -5,6 +5,7 @@ const context = {
 
 function addText(content) {
     context.terminal.textContent += content;
+    context.terminal.scrollTop = context.terminal.scrollHeight;
 }
 
 function newPrompt() {

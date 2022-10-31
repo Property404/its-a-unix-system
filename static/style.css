@@ -1,3 +1,7 @@
+* {
+    box-sizing: border-box;
+}
+
 html, body {
     background-color:pink;
     width:100%;
@@ -23,4 +27,5 @@ html, body {
     padding:.5rem;
     font-size:2rem;
     white-space: pre-wrap;
+    overflow-y: hidden;
 }
