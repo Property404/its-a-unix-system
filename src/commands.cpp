@@ -48,19 +48,11 @@ static int cd(const Shell& shell, const std::vector<std::string>& args) {
 static int cat(const Shell& shell, const std::vector<std::string>& args) {
     for (auto it = args.begin() + 1; it != args.end(); it++) {
         std::ifstream fp(*it);
-        std::string contents;
-        std::stringstream buffer;
         if (fp.fail()) {
             throw std::runtime_error("Could not open file " + *it);
         }
-        buffer << fp.rdbuf();
-        contents = buffer.str();
+        *(shell.out) << fp.rdbuf();
         fp.close();
-        std::string new_contents = "";
-        for (const char& c : contents) {
-            if (c != '\r') new_contents += c;
-        }
-        *(shell.out) << new_contents;
     }
     return 0;
 }
