@@ -1,4 +1,7 @@
-dist
-obj
-*.o
+/target
+**/*.rs.bk
+Cargo.lock
+bin/
+pkg/
+wasm-pack.log
 *.swp
