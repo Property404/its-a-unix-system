@@ -14,12 +14,6 @@ use std::{
 use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
 use web_sys::{self, KeyboardEvent};
 
-#[wasm_bindgen]
-extern "C" {
-    fn js_term_write(s: &str);
-    fn js_term_backspace();
-}
-
 pub fn standard() -> Result<(
     InputStream,
     OutputStream,
@@ -70,13 +64,13 @@ impl KeyboardTerminalReader {
         let callback = Closure::new(move |e: KeyboardEvent| {
             let key = e.key();
             if key.len() == 1 {
-                js_term_write(&key);
+                utils::js_term_write(&key);
                 cbuffer.extend(key.as_bytes());
                 if "'/?".contains(&key) {
                     e.prevent_default();
                 }
             } else if key == "Enter" {
-                js_term_write("\n");
+                utils::js_term_write("\n");
                 cbuffer.push(b'\n');
 
                 sender
@@ -85,7 +79,7 @@ impl KeyboardTerminalReader {
 
                 cbuffer.clear();
             } else if key == "Backspace" && !cbuffer.is_empty() {
-                js_term_backspace();
+                utils::js_term_backspace();
                 cbuffer.pop();
             }
         });
@@ -115,7 +109,7 @@ pub struct HtmlTerminalWriter {}
 
 impl TerminalWriter for HtmlTerminalWriter {
     fn send(&mut self, content: &str) -> Result<()> {
-        js_term_write(content);
+        utils::js_term_write(content);
         Ok(())
     }
 }

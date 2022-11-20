@@ -1,4 +1,5 @@
 use anyhow::{bail, Result};
+use wasm_bindgen::prelude::*;
 use web_sys::{self, Document};
 
 #[allow(unused)]
@@ -19,4 +20,10 @@ pub fn get_document() -> Result<Document> {
         bail!("Could not get root html document");
     };
     Ok(document)
+}
+
+#[wasm_bindgen]
+extern "C" {
+    pub fn js_term_write(s: &str);
+    pub fn js_term_backspace();
 }
