@@ -11,7 +11,7 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
-use wasm_bindgen::{closure::Closure, prelude::*, JsCast};
+use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{self, KeyboardEvent};
 
 pub fn standard() -> Result<(
@@ -110,6 +110,9 @@ pub struct HtmlTerminalWriter {}
 impl TerminalWriter for HtmlTerminalWriter {
     fn send(&mut self, content: &str) -> Result<()> {
         utils::js_term_write(content);
+        Ok(())
+    }
+    fn shutdown(&mut self) -> Result<()> {
         Ok(())
     }
 }

@@ -27,3 +27,8 @@ extern "C" {
     pub fn js_term_write(s: &str);
     pub fn js_term_backspace();
 }
+
+#[allow(unused)]
+pub fn debug<S: Into<String>>(s: S) {
+    js_term_write(s.into().as_str());
+}

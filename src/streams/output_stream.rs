@@ -19,6 +19,7 @@ const CARRIAGE_RETURN: u8 = 0x0c;
 
 pub trait TerminalWriter: Sized {
     fn send(&mut self, content: &str) -> Result<()>;
+    fn shutdown(&mut self) -> Result<()>;
 }
 
 pub enum OutputCommand {
@@ -57,6 +58,7 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
                             buffer.clear();
                         },
                         OutputCommand::Shutdown(signal) => {
+                            self.writer.shutdown()?;
                             signal.send(()).expect("Could not send shutdown signal");
                             return Ok(());
                         }
@@ -90,6 +92,7 @@ impl OutputStream {
         let (tx, rx) = oneshot::channel::<()>();
         self.tx.unbounded_send(OutputCommand::Shutdown(tx))?;
         rx.await?;
+        self.tx.close_channel();
         Ok(())
     }
 }
@@ -161,6 +164,9 @@ mod test {
     impl TerminalWriter for MockTerminalWriter {
         fn send(&mut self, content: &str) -> Result<()> {
             self.content += content.into();
+            Ok(())
+        }
+        fn shutdown(&mut self) -> Result<()> {
             Ok(())
         }
     }

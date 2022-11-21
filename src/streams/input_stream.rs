@@ -36,9 +36,13 @@ impl<T: TerminalReader> InputStreamBackend<T> {
         loop {
             select! {
                 bytes = self.reader.next() => {
-                    let bytes = bytes.expect("End of stream reached!");
-                    for byte in bytes {
-                        self.frontend_tx.unbounded_send(byte).expect("TODO: log this error");
+                    match bytes {
+                        Some(bytes) => for byte in bytes {
+                            self.frontend_tx.unbounded_send(byte).expect("TODO: log this error");
+                        },
+                        None => {
+                            self.frontend_tx.close_channel();
+                        }
                     }
                 },
                 command = self.command_rx.next() => {

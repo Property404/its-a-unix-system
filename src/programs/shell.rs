@@ -123,11 +123,13 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                     backend.run(),
                     async {
                         dispatch(&mut process1, *token1).await?;
-                        pout.shutdown().await
+                        pout.shutdown().await?;
+                        Ok(())
                     },
                     async {
                         dispatch(&mut process2, *token2).await?;
-                        pin.shutdown().await
+                        pin.shutdown().await?;
+                        Ok(())
                     },
                 }?;
 

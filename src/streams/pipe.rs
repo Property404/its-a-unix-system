@@ -32,6 +32,10 @@ impl TerminalWriter for PipeWriter {
         self.tx.unbounded_send(content.as_bytes().to_vec())?;
         Ok(())
     }
+    fn shutdown(&mut self) -> Result<()> {
+        self.tx.close_channel();
+        Ok(())
+    }
 }
 
 pub struct PipeReader {

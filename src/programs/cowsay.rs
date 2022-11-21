@@ -1,11 +1,12 @@
 use crate::process::Process;
 use anyhow::Result;
-use futures::io::AsyncWriteExt;
+use futures::io::{AsyncReadExt, AsyncWriteExt};
 
 pub async fn cowsay(process: &mut Process, args: Vec<String>) -> Result<()> {
-    // TODO: Read entire input
     let text = if args.len() == 1 {
-        process.stdin.get_line().await?
+        let mut text = String::new();
+        process.stdin.read_to_string(&mut text).await?;
+        text
     } else {
         args.into_iter().skip(1).collect::<Vec<_>>().join(" ")
     };
