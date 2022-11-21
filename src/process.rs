@@ -1,14 +1,17 @@
-use crate::streams::InputStream;
-use crate::streams::OutputStream;
+use crate::streams::{InputStream, OutputStream};
 use anyhow::Result;
-use std::collections::HashSet;
-use std::future::Future;
+use futures::channel::{mpsc::UnboundedSender, oneshot};
+use std::{collections::HashSet, future::Future};
 
 #[derive(Clone)]
 pub struct Process {
     pub stdin: InputStream,
     pub stdout: OutputStream,
     pub env: HashSet<String, String>,
+    // Used by a process to indicate it's listening for signals
+    // Currently we just have the ^C signal, but we might add more
+    // later. I don't know, I'm tired
+    pub signal_registrar: UnboundedSender<oneshot::Sender<()>>,
 }
 
 impl Process {

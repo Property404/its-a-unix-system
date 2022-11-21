@@ -4,7 +4,10 @@ use crate::{
 };
 use anyhow::{anyhow, Result};
 use futures::{
-    channel::mpsc::{self, UnboundedReceiver},
+    channel::{
+        mpsc::{self, UnboundedReceiver, UnboundedSender},
+        oneshot,
+    },
     stream::{FusedStream, Stream},
 };
 use std::{
@@ -14,14 +17,18 @@ use std::{
 use wasm_bindgen::{closure::Closure, JsCast};
 use web_sys::{self, KeyboardEvent};
 
-pub fn standard() -> Result<(
+pub type InitializationTuple = (
     InputStream,
     OutputStream,
     Backend<KeyboardTerminalReader, HtmlTerminalWriter>,
-)> {
+    UnboundedSender<oneshot::Sender<()>>,
+);
+
+pub fn standard() -> Result<InitializationTuple> {
+    let (signal_registrar_tx, signal_registrar_rx) = mpsc::unbounded();
     let writer = HtmlTerminalWriter::default();
     let (output_stream, output_bkend) = OutputStream::from_writer(writer);
-    let reader = KeyboardTerminalReader::new()?;
+    let reader = KeyboardTerminalReader::new(signal_registrar_rx)?;
     let (input_stream, input_bkend) = InputStream::from_reader(reader);
 
     let backend = Backend {
@@ -29,7 +36,7 @@ pub fn standard() -> Result<(
         output_bkend,
     };
 
-    Ok((input_stream, output_stream, backend))
+    Ok((input_stream, output_stream, backend, signal_registrar_tx))
 }
 
 pub struct KeyboardTerminalReader {
@@ -56,14 +63,26 @@ impl FusedStream for KeyboardTerminalReader {
 // This is a "Sit Still and Look Pretty" struct.
 // Just existing should be enough for it to...do things.
 impl KeyboardTerminalReader {
-    fn new() -> Result<KeyboardTerminalReader> {
+    fn new(
+        mut signal_registrar: UnboundedReceiver<oneshot::Sender<()>>,
+    ) -> Result<KeyboardTerminalReader> {
         let document = utils::get_document()?;
         let (sender, receiver) = mpsc::unbounded();
         let mut cbuffer = Vec::<u8>::new();
 
         let callback = Closure::new(move |e: KeyboardEvent| {
             let key = e.key();
-            if key.len() == 1 {
+
+            if e.ctrl_key() && key == "c" {
+                e.prevent_default();
+                while let Ok(Some(channel)) = signal_registrar.try_next() {
+                    // We don't care if the channel is closed
+                    // It just means the process is probably dead
+                    let _ = channel.send(());
+                }
+                utils::js_term_write("^C");
+                cbuffer.clear();
+            } else if key.len() == 1 {
                 utils::js_term_write(&key);
                 cbuffer.extend(key.as_bytes());
                 if "'/?".contains(&key) {

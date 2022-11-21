@@ -1,7 +1,13 @@
 use crate::{process::Process, streams};
-use anyhow::{bail, Result};
-use futures::future::{BoxFuture, FutureExt};
-use futures::{io::AsyncWriteExt, try_join};
+use anyhow::{anyhow, bail, Error, Result};
+use futures::{
+    channel::oneshot,
+    future::{BoxFuture, FutureExt},
+    io::AsyncWriteExt,
+    select,
+    stream::{AbortHandle, Abortable},
+    try_join,
+};
 
 #[derive(Debug, PartialEq, Eq)]
 enum BasicToken {
@@ -142,7 +148,36 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
 
 async fn run_script(process: &mut Process, source: &str) -> Result<()> {
     let root_token = parse(tokenize(source)?)?;
-    dispatch(process, root_token).await
+
+    let (abort_channel_tx, mut abort_channel_rx) = oneshot::channel();
+    let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel();
+
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    process.signal_registrar.unbounded_send(abort_channel_tx)?;
+    let future = Abortable::new(dispatch(process, root_token), abort_registration);
+    try_join! {
+        async {
+            select! {
+                _ = abort_channel_rx => {
+                    abort_handle.abort();
+                },
+                _ = meta_abort_channel_rx => {
+                }
+            };
+            Result::<(), Error>::Ok(())
+        },
+        async {
+            match future.await {
+                Ok(inner) => inner?,
+                Err(_) =>  {
+                    Err(anyhow!("INTERRUPT"))?
+                }
+            };
+            let _ = meta_abort_channel_tx.send(());
+            Ok(())
+        }
+    }?;
+    Ok(())
 }
 
 pub async fn shell(process: &mut Process, _args: Vec<String>) -> Result<()> {

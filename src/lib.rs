@@ -17,12 +17,13 @@ static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 async fn run() -> Result<()> {
     utils::set_panic_hook();
 
-    let (mut stdin, stdout, mut backend) = streams::standard()?;
+    let (mut stdin, stdout, mut backend, signal_registrar) = streams::standard()?;
 
     let mut shell = Process {
         stdin: stdin.clone(),
         stdout: stdout.clone(),
         env: Default::default(),
+        signal_registrar,
     };
 
     try_join!(backend.run(), async {
