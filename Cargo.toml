@@ -33,6 +33,11 @@ js-sys = "0.3.60"
 futures = "0.3.25"
 futures-test = "0.3.25"
 
+# TODO: switch to crates.io version when 0.7.2 or later is out
+[dependencies.vfs]
+git = "https://github.com/manuel-woelker/rust-vfs"
+branch = "master"
+
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
 

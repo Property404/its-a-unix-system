@@ -107,8 +107,21 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
         match root {
             Token::Command(args) => {
                 let command = args[0].clone();
-
-                if crate::programs::get_program(process, args)
+                if command == "cd" {
+                    if args.len() > 1 {
+                        let new_path = process.cwd.join(&args[1])?;
+                        if new_path.is_dir()? {
+                            process.cwd = new_path;
+                        } else {
+                            process.stdout.write_all(b"cd: ").await?;
+                            process
+                                .stdout
+                                .write_all(new_path.as_str().as_bytes())
+                                .await?;
+                            process.stdout.write_all(b": No such directory\n").await?;
+                        }
+                    }
+                } else if crate::programs::get_program(process, args)
                     .await
                     .transpose()?
                     .is_none()

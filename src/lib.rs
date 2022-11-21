@@ -5,6 +5,7 @@ mod utils;
 use anyhow::Result;
 use futures::try_join;
 use process::Process;
+use vfs::MemoryFS;
 
 use wasm_bindgen::prelude::*;
 
@@ -24,6 +25,7 @@ async fn run() -> Result<()> {
         stdout: stdout.clone(),
         env: Default::default(),
         signal_registrar,
+        cwd: MemoryFS::new().into(),
     };
 
     try_join!(backend.run(), async {

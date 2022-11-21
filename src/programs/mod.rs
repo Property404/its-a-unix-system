@@ -2,7 +2,10 @@ use crate::process::Process;
 use anyhow::Result;
 mod cowsay;
 mod echo;
+mod ls;
+mod mkdir;
 mod shell;
+mod touch;
 
 pub use shell::shell;
 
@@ -14,6 +17,12 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(echo::echo(process, args).await)
     } else if command == "cowsay" {
         Some(cowsay::cowsay(process, args).await)
+    } else if command == "ls" {
+        Some(ls::ls(process, args).await)
+    } else if command == "touch" {
+        Some(touch::touch(process, args).await)
+    } else if command == "mkdir" {
+        Some(mkdir::mkdir(process, args).await)
     } else {
         None
     }
