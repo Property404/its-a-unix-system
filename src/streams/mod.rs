@@ -4,10 +4,8 @@ mod pipe;
 mod standard_streams;
 use anyhow::Result;
 use futures::try_join;
-pub use input_stream::InputStream;
-pub use input_stream::{InputStreamBackend, TerminalReader};
-pub use output_stream::OutputStream;
-pub use output_stream::{OutputStreamBackend, TerminalWriter};
+pub use input_stream::{InputStream, InputStreamBackend, TerminalReader};
+pub use output_stream::{OutputStream, OutputStreamBackend, TerminalWriter};
 pub use pipe::pipe;
 pub use standard_streams::standard;
 
