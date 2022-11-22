@@ -160,7 +160,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
 }
 
 async fn run_script(process: &mut Process, source: &str) -> Result<()> {
-    let lines = source.split("\n");
+    let lines = source.split('\n');
     for line in lines {
         if line.trim().is_empty() {
             continue;
