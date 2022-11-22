@@ -11,7 +11,7 @@ pub async fn fortune(process: &mut Process, _args: Vec<String>) -> Result<()> {
     file.read_to_string(&mut fortunes)?;
     let fortunes = fortunes.trim().split("\n\n").collect::<Vec<&str>>();
     let Some(fortune) = fortunes.choose(&mut rand::thread_rng()) else {
-        bail!("Could not select a fortune");
+        bail!("fortune: Could not select a fortune");
     };
     process.stdout.write_all(fortune.as_bytes())?;
     process.stdout.write_all(b"\n")?;

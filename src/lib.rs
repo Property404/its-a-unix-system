@@ -24,6 +24,7 @@ async fn run() -> Result<()> {
     let mut shell = Process {
         stdin: stdin.clone(),
         stdout: stdout.clone(),
+        stderr: stdout.clone(),
         env: Default::default(),
         signal_registrar,
         cwd: rootfs,

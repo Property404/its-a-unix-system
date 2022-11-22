@@ -113,12 +113,12 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                         if new_path.is_dir()? {
                             process.cwd = new_path;
                         } else {
-                            process.stdout.write_all(b"cd: ").await?;
+                            process.stderr.write_all(b"cd: ").await?;
                             process
                                 .stdout
                                 .write_all(new_path.as_str().as_bytes())
                                 .await?;
-                            process.stdout.write_all(b": No such directory\n").await?;
+                            process.stderr.write_all(b": No such directory\n").await?;
                         }
                     }
                 } else if crate::programs::get_program(process, args)
@@ -207,8 +207,8 @@ pub async fn shell(process: &mut Process, _args: Vec<String>) -> Result<()> {
         }
 
         if let Err(e) = run_script(process, &line).await {
-            stdout.write_all(e.to_string().as_bytes()).await?;
-            stdout.write_all(b"\n").await?;
+            process.stderr.write_all(e.to_string().as_bytes()).await?;
+            process.stderr.write_all(b"\n").await?;
         }
     }
 }

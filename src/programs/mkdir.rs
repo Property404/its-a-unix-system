@@ -4,7 +4,7 @@ use std::io::Write;
 
 pub async fn mkdir(process: &mut Process, args: Vec<String>) -> Result<()> {
     if args.len() < 2 {
-        process.stdout.write_all(b"touch: missing file_operand\n")?;
+        process.stderr.write_all(b"touch: missing file_operand\n")?;
         return Ok(());
     }
     for arg in args.into_iter().skip(1) {

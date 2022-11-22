@@ -7,6 +7,7 @@ use vfs::VfsPath;
 pub struct Process {
     pub stdin: InputStream,
     pub stdout: OutputStream,
+    pub stderr: OutputStream,
     pub env: HashSet<String, String>,
     pub cwd: VfsPath,
     // Used by a process to indicate it's listening for signals
