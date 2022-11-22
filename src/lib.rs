@@ -1,3 +1,5 @@
+mod filesystem;
+mod generated;
 mod process;
 mod programs;
 mod streams;
@@ -5,8 +7,6 @@ mod utils;
 use anyhow::Result;
 use futures::try_join;
 use process::Process;
-use vfs::MemoryFS;
-
 use wasm_bindgen::prelude::*;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
@@ -20,12 +20,13 @@ async fn run() -> Result<()> {
 
     let (mut stdin, stdout, mut backend, signal_registrar) = streams::standard()?;
 
+    let rootfs = filesystem::get_root()?;
     let mut shell = Process {
         stdin: stdin.clone(),
         stdout: stdout.clone(),
         env: Default::default(),
         signal_registrar,
-        cwd: MemoryFS::new().into(),
+        cwd: rootfs,
     };
 
     try_join!(backend.run(), async {

@@ -32,11 +32,17 @@ wasm-bindgen-futures = { version = "0.4.33", features = ["futures-core", "future
 js-sys = "0.3.60"
 futures = "0.3.25"
 futures-test = "0.3.25"
+rust-embed = "6.4.2"
 
 # TODO: switch to crates.io version when 0.7.2 or later is out
 [dependencies.vfs]
 git = "https://github.com/manuel-woelker/rust-vfs"
 branch = "master"
+features = ["embedded-fs"]
+
+[build-dependencies]
+anyhow = "1.0.66"
+walkdir = "2.3.2"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.13"
