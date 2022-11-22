@@ -20,11 +20,10 @@ futures = "0.3.25"
 getrandom = { version = "0.2.8", features = ["js"] }
 js-sys = "0.3.60"
 rand = "0.8.5"
+textwrap = "0.16.0"
 wasm-bindgen = "0.2.83"
 wasm-bindgen-futures = { version = "0.4.33", features = ["futures-core", "futures-core-03-stream"] }
 web-sys = { version = "0.3.60", features = ["Document", "Window", "KeyboardEvent"] }
-wee_alloc = { version = "0.4.5", optional = true }
-textwrap = "0.16.0"
 
 # TODO: switch to crates.io version when 0.7.2 or later is out
 [dependencies.vfs]
