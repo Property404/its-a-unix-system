@@ -1,5 +1,6 @@
 use crate::process::Process;
 use anyhow::Result;
+mod cat;
 mod cowsay;
 mod echo;
 mod ls;
@@ -23,6 +24,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(touch::touch(process, args).await)
     } else if command == "mkdir" {
         Some(mkdir::mkdir(process, args).await)
+    } else if command == "cat" {
+        Some(cat::cat(process, args).await)
     } else {
         None
     }
