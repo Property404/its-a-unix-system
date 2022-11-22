@@ -30,7 +30,7 @@ async fn run() -> Result<()> {
     };
 
     try_join!(backend.run(), async {
-        shell.run(programs::shell, Default::default()).await?;
+        programs::shell(&mut shell, Default::default()).await?;
         // Could be concurrent
         stdout.shutdown().await?;
         stdin.shutdown().await?;
