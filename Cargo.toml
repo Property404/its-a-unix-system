@@ -15,10 +15,12 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 anyhow = "1.0.66"
-console_error_panic_hook = { version = "0.1.6", optional = true }
+console_error_panic_hook = { version = "0.1.7", optional = true }
 futures = "0.3.25"
+getrandom = { version = "0.2.8", features = ["js"] }
 js-sys = "0.3.60"
-wasm-bindgen = "0.2.63"
+rand = "0.8.5"
+wasm-bindgen = "0.2.83"
 wasm-bindgen-futures = { version = "0.4.33", features = ["futures-core", "futures-core-03-stream"] }
 web-sys = { version = "0.3.60", features = ["Document", "Window", "KeyboardEvent"] }
 wee_alloc = { version = "0.4.5", optional = true }
@@ -33,7 +35,7 @@ anyhow = "1.0.66"
 walkdir = "2.3.2"
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.13"
+wasm-bindgen-test = "0.3.33"
 futures-test = "0.3.25"
 
 [profile.release]

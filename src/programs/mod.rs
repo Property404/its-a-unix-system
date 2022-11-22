@@ -3,6 +3,7 @@ use anyhow::Result;
 mod cat;
 mod cowsay;
 mod echo;
+mod fortune;
 mod ls;
 mod mkdir;
 mod shell;
@@ -26,6 +27,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(mkdir::mkdir(process, args).await)
     } else if command == "cat" {
         Some(cat::cat(process, args).await)
+    } else if command == "fortune" {
+        Some(fortune::fortune(process, args).await)
     } else {
         None
     }
