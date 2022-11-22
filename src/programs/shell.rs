@@ -160,42 +160,60 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
 }
 
 async fn run_script(process: &mut Process, source: &str) -> Result<()> {
-    let root_token = parse(tokenize(source)?)?;
-
-    let (abort_channel_tx, mut abort_channel_rx) = oneshot::channel();
-    let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel();
-
-    let (abort_handle, abort_registration) = AbortHandle::new_pair();
-    process.signal_registrar.unbounded_send(abort_channel_tx)?;
-    let future = Abortable::new(dispatch(process, root_token), abort_registration);
-    try_join! {
-        async {
-            select! {
-                _ = abort_channel_rx => {
-                    abort_handle.abort();
-                },
-                _ = meta_abort_channel_rx => {
-                }
-            };
-            Result::<(), Error>::Ok(())
-        },
-        async {
-            match future.await {
-                Ok(inner) => inner?,
-                Err(_) =>  {
-                    Err(anyhow!("INTERRUPT"))?
-                }
-            };
-            let _ = meta_abort_channel_tx.send(());
-            Ok(())
+    let lines = source.split("\n");
+    for line in lines {
+        if line.trim().is_empty() {
+            continue;
         }
-    }?;
+        let root_token = parse(tokenize(line)?)?;
+
+        let (abort_channel_tx, mut abort_channel_rx) = oneshot::channel();
+        let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel();
+
+        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        process.signal_registrar.unbounded_send(abort_channel_tx)?;
+        let future = Abortable::new(dispatch(process, root_token), abort_registration);
+        try_join! {
+            async {
+                select! {
+                    _ = abort_channel_rx => {
+                        abort_handle.abort();
+                    },
+                    _ = meta_abort_channel_rx => {
+                    }
+                };
+                Result::<(), Error>::Ok(())
+            },
+            async {
+                match future.await {
+                    Ok(inner) => inner?,
+                    Err(_) =>  {
+                        Err(anyhow!("INTERRUPT"))?
+                    }
+                };
+                let _ = meta_abort_channel_tx.send(());
+                Ok(())
+            }
+        }?;
+    }
     Ok(())
 }
 
-pub async fn shell(process: &mut Process, _args: Vec<String>) -> Result<()> {
+pub async fn shell(process: &mut Process, args: Vec<String>) -> Result<()> {
     let mut stdout = process.stdout.clone();
     let mut stdin = process.stdin.clone();
+
+    if args.len() > 1 {
+        let mut script = String::new();
+        process
+            .cwd
+            .join(&args[1])?
+            .open_file()?
+            .read_to_string(&mut script)?;
+
+        run_script(process, &script).await?;
+        return Ok(());
+    }
 
     loop {
         stdout.write_all(b"$ ").await?;

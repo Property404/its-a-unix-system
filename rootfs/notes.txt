@@ -1,3 +1,0 @@
-This is part of your root file system.
-
-Woopty do.
