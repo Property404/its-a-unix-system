@@ -16,5 +16,6 @@ html, body {
     width: 100%;
     height: 100%;
     white-space: pre-wrap;
+    overflow-y: hidden;
     font-family: monospace;
 }

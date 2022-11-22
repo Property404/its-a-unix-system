@@ -2,6 +2,7 @@ const terminal = document.getElementById("terminal");
 
 function js_term_write(str) {
     terminal.textContent += str;
+    terminal.scrollTop = terminal.scrollHeight;
 }
 
 function js_term_clear() {
