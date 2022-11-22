@@ -29,6 +29,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(cat::cat(process, args).await)
     } else if command == "fortune" {
         Some(fortune::fortune(process, args).await)
+    } else if command == "sh" {
+        Some(shell::shell(process, args).await)
     } else {
         None
     }
