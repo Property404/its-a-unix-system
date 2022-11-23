@@ -13,7 +13,8 @@ fn main() -> Result<()> {
     let mut file = File::create("./src/generated/rootfs.rs").unwrap();
     writeln!(
         &mut file,
-        "use anyhow::Result;
+        "#![allow(unused)]
+use anyhow::Result;
 use vfs::VfsPath;
 
 pub fn populate_rootfs(path: &mut VfsPath) -> Result<()> {{"
@@ -32,21 +33,23 @@ pub fn populate_rootfs(path: &mut VfsPath) -> Result<()> {{"
                 &mut file,
                 "    let mut file = path.join(\"{path}\")?.create_file()?;"
             )?;
-            writeln!(&mut file, "    file.write_all(&[")?;
-            for chunk in contents.chunks(15) {
-                write!(&mut file, "        ")?;
-                // TODO: Use std vesion when this is in stable
-                #[allow(unstable_name_collisions)]
-                let chunk = chunk
-                    .iter()
-                    .map(|byte| format!("0x{byte:02x},"))
-                    .intersperse(String::from(" "));
-                for string in chunk {
-                    write!(&mut file, "{string}")?;
+            if !contents.is_empty() {
+                writeln!(&mut file, "    file.write_all(&[")?;
+                for chunk in contents.chunks(15) {
+                    write!(&mut file, "        ")?;
+                    // TODO: Use std vesion when this is in stable
+                    #[allow(unstable_name_collisions)]
+                    let chunk = chunk
+                        .iter()
+                        .map(|byte| format!("0x{byte:02x},"))
+                        .intersperse(String::from(" "));
+                    for string in chunk {
+                        write!(&mut file, "{string}")?;
+                    }
+                    writeln!(&mut file)?;
                 }
-                writeln!(&mut file)?;
+                writeln!(&mut file, "    ])?;\n")?;
             }
-            writeln!(&mut file, "    ])?;\n")?;
         }
     }
 
