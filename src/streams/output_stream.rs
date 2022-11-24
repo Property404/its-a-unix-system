@@ -17,7 +17,7 @@ use std::{
 const NEWLINE: u8 = 0x0a;
 const CARRIAGE_RETURN: u8 = 0x0c;
 
-pub trait TerminalWriter: Sized {
+pub trait TerminalWriter: Sized + Send {
     fn send(&mut self, content: &str) -> Result<()>;
     fn shutdown(&mut self) -> Result<()>;
     /// Is this being output to a terminal?

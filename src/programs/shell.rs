@@ -12,6 +12,7 @@ use futures::{
 #[derive(Debug, PartialEq, Eq)]
 enum BasicToken {
     Pipe,
+    FileRedirectOut { append: bool },
     Value(String),
 }
 
@@ -23,6 +24,11 @@ enum QuoteType {
 
 enum Token {
     Pipe(Box<Token>, Box<Token>),
+    FileRedirectOut {
+        lhs: Box<Token>,
+        append: bool,
+        path: String,
+    },
     Command(Vec<String>),
 }
 
@@ -36,12 +42,33 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
                     Token::Command(values) => {
                         values.push(value);
                     }
-                    Token::Pipe(_, _) => unreachable!("Pipes cannot be nested on rhs"),
+                    _ => unreachable!("Pipes cannot be nested on rhs"),
                 },
+                Token::FileRedirectOut {
+                    lhs,
+                    append: _,
+                    path,
+                } => {
+                    if path.is_empty() {
+                        *path = value;
+                    } else {
+                        match &mut **lhs {
+                            Token::Command(values) => values.push(value),
+                            _ => bail!("Syntax error: file redirect has non-command token as lhs"),
+                        }
+                    }
+                }
                 Token::Command(values) => values.push(value),
             },
             BasicToken::Pipe => {
                 root = Token::Pipe(Box::new(root), Box::new(Token::Command(Vec::new())));
+            }
+            BasicToken::FileRedirectOut { append } => {
+                root = Token::FileRedirectOut {
+                    lhs: Box::new(root),
+                    append,
+                    path: String::new(),
+                };
             }
         }
     }
@@ -62,13 +89,15 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
                 } else if c == '"' {
                     quote_level = QuoteType::Double;
                     continue;
-                } else if [' ', '\n', '\t', '|'].contains(&c) {
+                } else if [' ', '\n', '\t', '|', '>'].contains(&c) {
                     if !buffer.is_empty() {
                         tokens.push(BasicToken::Value(buffer.clone()));
                         buffer.clear();
                     }
                     if c == '|' {
                         tokens.push(BasicToken::Pipe);
+                    } else if c == '>' {
+                        tokens.push(BasicToken::FileRedirectOut { append: false });
                     }
                     continue;
                 }
@@ -148,6 +177,27 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                     async {
                         dispatch(&mut process2, *token2).await?;
                         pin.shutdown().await?;
+                        Ok(())
+                    },
+                }?;
+
+                Ok(())
+            }
+            Token::FileRedirectOut { lhs, append, path } => {
+                let (pout, mut backend) = {
+                    let file = process.get_path(path)?;
+
+                    streams::file_redirect_out(file, append)
+                };
+
+                let mut child_process = process.clone();
+                child_process.stdout = pout.clone();
+
+                try_join! {
+                    backend.run(),
+                    async {
+                        dispatch(&mut child_process, *lhs).await?;
+                        pout.shutdown().await?;
                         Ok(())
                     },
                 }?;
