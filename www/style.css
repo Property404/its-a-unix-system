@@ -19,3 +19,13 @@ html, body {
     overflow-y: hidden;
     font-family: monospace;
 }
+
+.ct-normal {}
+.ct-black { color: black; }
+.ct-white { color: white; }
+.ct-blue { color: #99f; }
+.ct-cyan { color: cyan; }
+.ct-green { color: green; }
+.ct-red { color: red; }
+.ct-yellow { color: yellow; }
+.ct-magenta { color: magenta; }

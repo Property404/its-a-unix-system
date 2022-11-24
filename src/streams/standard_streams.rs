@@ -131,7 +131,12 @@ impl TerminalWriter for HtmlTerminalWriter {
         utils::js_term_write(content);
         Ok(())
     }
+
     fn shutdown(&mut self) -> Result<()> {
         Ok(())
+    }
+
+    fn to_terminal(&self) -> bool {
+        true
     }
 }

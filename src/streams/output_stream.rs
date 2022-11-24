@@ -20,21 +20,26 @@ const CARRIAGE_RETURN: u8 = 0x0c;
 pub trait TerminalWriter: Sized {
     fn send(&mut self, content: &str) -> Result<()>;
     fn shutdown(&mut self) -> Result<()>;
+    /// Is this being output to a terminal?
+    fn to_terminal(&self) -> bool {
+        false
+    }
 }
 
-pub enum OutputCommand {
+enum Command {
     Bytes(Vec<u8>),
     Flush,
+    ToTerminal(oneshot::Sender<bool>),
     Shutdown(oneshot::Sender<()>),
 }
 
 pub struct OutputStreamBackend<T: TerminalWriter> {
     writer: T,
-    rx: UnboundedReceiver<OutputCommand>,
+    rx: UnboundedReceiver<Command>,
 }
 
 impl<T: TerminalWriter> OutputStreamBackend<T> {
-    pub fn new(writer: T, rx: UnboundedReceiver<OutputCommand>) -> Self {
+    fn new(writer: T, rx: UnboundedReceiver<Command>) -> Self {
         Self { writer, rx }
     }
 
@@ -44,7 +49,7 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
             select! {
                 command = self.rx.next() => {
                     match command.expect("End of command channel") {
-                        OutputCommand::Bytes(bytes) => {
+                        Command::Bytes(bytes) => {
                             for byte in bytes {
                                 buffer.push(byte);
                                 if byte == NEWLINE || byte == CARRIAGE_RETURN {
@@ -53,14 +58,17 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
                                 }
                             }
                         },
-                        OutputCommand::Flush => {
+                        Command::Flush => {
                             self.write(&buffer)?;
                             buffer.clear();
                         },
-                        OutputCommand::Shutdown(signal) => {
+                        Command::Shutdown(signal) => {
                             self.writer.shutdown()?;
                             signal.send(()).expect("Could not send shutdown signal");
                             return Ok(());
+                        },
+                        Command::ToTerminal(signal) => {
+                            let _ = signal.send(self.writer.to_terminal());
                         }
                     }
                 }
@@ -78,7 +86,7 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
 
 #[derive(Clone)]
 pub struct OutputStream {
-    tx: UnboundedSender<OutputCommand>,
+    tx: UnboundedSender<Command>,
 }
 
 impl OutputStream {
@@ -90,24 +98,31 @@ impl OutputStream {
 
     pub async fn shutdown(&self) -> Result<()> {
         let (tx, rx) = oneshot::channel::<()>();
-        self.tx.unbounded_send(OutputCommand::Shutdown(tx))?;
+        self.tx.unbounded_send(Command::Shutdown(tx))?;
         rx.await?;
         self.tx.close_channel();
         Ok(())
+    }
+
+    /// Query the backend to check if this is really being output to a terminal.
+    pub async fn to_terminal(&self) -> Result<bool> {
+        let (tx, rx) = oneshot::channel::<bool>();
+        self.tx.unbounded_send(Command::ToTerminal(tx))?;
+        Ok(rx.await?)
     }
 }
 
 impl io::Write for OutputStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.tx
-            .unbounded_send(OutputCommand::Bytes(buf.to_vec()))
+            .unbounded_send(Command::Bytes(buf.to_vec()))
             .map_err(|_| io::ErrorKind::Other)?;
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
         self.tx
-            .unbounded_send(OutputCommand::Flush)
+            .unbounded_send(Command::Flush)
             .map_err(|_| io::ErrorKind::Other)?;
         Ok(())
     }
@@ -123,7 +138,7 @@ impl AsyncWrite for OutputStream {
         match tx.poll_ready(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Ok(())) => {
-                if tx.start_send(OutputCommand::Bytes(buf.to_vec())).is_err() {
+                if tx.start_send(Command::Bytes(buf.to_vec())).is_err() {
                     return Poll::Ready(Err(io::ErrorKind::Other.into()));
                 }
                 Poll::Ready(Ok(buf.len()))
@@ -137,7 +152,7 @@ impl AsyncWrite for OutputStream {
         match tx.poll_ready(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(Ok(())) => {
-                if tx.start_send(OutputCommand::Flush).is_err() {
+                if tx.start_send(Command::Flush).is_err() {
                     return Poll::Ready(Err(io::ErrorKind::Other.into()));
                 }
                 Poll::Ready(Ok(()))

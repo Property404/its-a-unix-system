@@ -1,6 +1,7 @@
 use crate::process::Process;
 use anyhow::Result;
 mod cat;
+mod common;
 mod cowsay;
 mod echo;
 mod fortune;

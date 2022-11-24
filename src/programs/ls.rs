@@ -1,6 +1,8 @@
 use crate::process::Process;
+use crate::programs::common::color_picker::{Color, ColorPicker};
 use anyhow::{bail, Result};
-use std::io::Write;
+
+const DIR_COLOR: Color = Color::Blue;
 
 pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
     let path = if args.len() == 1 {
@@ -16,13 +18,21 @@ pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
         dir
     };
 
+    let mut picker = ColorPicker::new(process.stdout.to_terminal().await?);
+
     for entity in path.walk_dir()? {
         let entity = entity?;
         if entity.parent().as_ref() != Some(&path) {
             break;
         }
+
+        if entity.is_dir()? {
+            picker.set_color(DIR_COLOR);
+        } else {
+            picker.reset();
+        }
         let display = format!("{}\n", entity.filename());
-        process.stdout.write_all(display.as_bytes())?;
+        picker.write(&mut process.stdout, &display)?;
     }
     Ok(())
 }
