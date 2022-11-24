@@ -6,7 +6,7 @@ pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
     let path = if args.len() == 1 {
         process.cwd.clone()
     } else {
-        let dir = process.cwd.join(&args[1])?;
+        let dir = process.get_path(&args[1])?;
         if !dir.exists()? {
             bail!("ls: no such file or directory: {}", dir.as_str());
         }

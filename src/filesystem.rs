@@ -2,10 +2,11 @@ use crate::generated::rootfs::populate_rootfs;
 use anyhow::Result;
 use vfs::{MemoryFS, VfsPath};
 
+/// Get the RootFS as a VfsPath.
 pub fn get_root() -> Result<VfsPath> {
     let mut path: VfsPath = MemoryFS::new().into();
     populate_rootfs(&mut path)?;
-    assert!(path.join("usr").unwrap().exists().unwrap());
+    debug_assert!(path.join("usr").unwrap().exists().unwrap());
     Ok(path)
 }
 

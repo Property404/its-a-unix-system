@@ -109,7 +109,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                 let command = args[0].clone();
                 if command == "cd" {
                     if args.len() > 1 {
-                        let new_path = process.cwd.join(&args[1])?;
+                        let new_path = process.get_path(&args[1])?;
                         if new_path.is_dir()? {
                             process.cwd = new_path;
                         } else {
@@ -206,8 +206,7 @@ pub async fn shell(process: &mut Process, args: Vec<String>) -> Result<()> {
     if args.len() > 1 {
         let mut script = String::new();
         process
-            .cwd
-            .join(&args[1])?
+            .get_path(&args[1])?
             .open_file()?
             .read_to_string(&mut script)?;
 

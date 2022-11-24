@@ -8,7 +8,7 @@ pub async fn mkdir(process: &mut Process, args: Vec<String>) -> Result<()> {
         return Ok(());
     }
     for arg in args.into_iter().skip(1) {
-        process.cwd.join(arg)?.create_dir_all()?;
+        process.get_path(arg)?.create_dir_all()?;
     }
     Ok(())
 }

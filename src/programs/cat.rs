@@ -17,7 +17,7 @@ pub async fn cat(process: &mut Process, args: Vec<String>) -> Result<()> {
 
     let mut contents = String::new();
     for arg in args.into_iter().skip(1) {
-        let path = process.cwd.join(arg)?;
+        let path = process.get_path(arg)?;
         if !path.exists()? {
             bail!("cat: No such file {}", path.as_str());
         }
