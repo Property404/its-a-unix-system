@@ -7,6 +7,7 @@ mod echo;
 mod fortune;
 mod ls;
 mod mkdir;
+mod rm;
 mod shell;
 mod touch;
 
@@ -32,6 +33,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(fortune::fortune(process, args).await)
     } else if command == "sh" {
         Some(shell::shell(process, args).await)
+    } else if command == "rm" {
+        Some(rm::rm(process, args).await)
     } else {
         None
     }
