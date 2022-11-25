@@ -29,7 +29,7 @@ impl Stream for FileInReader {
     type Item = Vec<u8>;
 
     fn poll_next(mut self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let mut buffer = [0; 1];
+        let mut buffer = [0; 32];
         match self.file.read(&mut buffer) {
             Err(_) | Ok(0) => {
                 self.terminated = true;
