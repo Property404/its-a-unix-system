@@ -185,9 +185,13 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
             }
             Token::FileRedirectOut { lhs, append, path } => {
                 let (pout, mut backend) = {
-                    let file = process.get_path(path)?;
+                    let file = if append {
+                        process.get_path(path)?.append_file()?
+                    } else {
+                        process.get_path(path)?.create_file()?
+                    };
 
-                    streams::file_redirect_out(file, append)
+                    streams::file_redirect_out(file)
                 };
 
                 let mut child_process = process.clone();
