@@ -1,9 +1,11 @@
+mod file_redirect_in;
 mod file_redirect_out;
 mod input_stream;
 mod output_stream;
 mod pipe;
 mod standard_streams;
 use anyhow::Result;
+pub use file_redirect_in::file_redirect_in;
 pub use file_redirect_out::file_redirect_out;
 use futures::try_join;
 pub use input_stream::{InputStream, InputStreamBackend, TerminalReader};

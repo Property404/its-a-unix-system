@@ -13,6 +13,7 @@ use futures::{
 enum BasicToken {
     Pipe,
     FileRedirectOut { append: bool },
+    FileRedirectIn,
     Value(String),
 }
 
@@ -27,6 +28,10 @@ enum Token {
     FileRedirectOut {
         lhs: Box<Token>,
         append: bool,
+        path: String,
+    },
+    FileRedirectIn {
+        lhs: Box<Token>,
         path: String,
     },
     Command(Vec<String>),
@@ -48,7 +53,8 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
                     lhs,
                     append: _,
                     path,
-                } => {
+                }
+                | Token::FileRedirectIn { lhs, path } => {
                     if path.is_empty() {
                         *path = value;
                     } else {
@@ -67,6 +73,12 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
                 root = Token::FileRedirectOut {
                     lhs: Box::new(root),
                     append,
+                    path: String::new(),
+                };
+            }
+            BasicToken::FileRedirectIn => {
+                root = Token::FileRedirectIn {
+                    lhs: Box::new(root),
                     path: String::new(),
                 };
             }
@@ -89,7 +101,7 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
                 } else if c == '"' {
                     quote_level = QuoteType::Double;
                     continue;
-                } else if [' ', '\n', '\t', '|', '>'].contains(&c) {
+                } else if [' ', '\n', '\t', '|', '>', '<'].contains(&c) {
                     if !buffer.is_empty() {
                         tokens.push(BasicToken::Value(buffer.clone()));
                         buffer.clear();
@@ -98,6 +110,8 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
                         tokens.push(BasicToken::Pipe);
                     } else if c == '>' {
                         tokens.push(BasicToken::FileRedirectOut { append: false });
+                    } else if c == '<' {
+                        tokens.push(BasicToken::FileRedirectIn);
                     }
                     continue;
                 }
@@ -202,6 +216,27 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                     async {
                         dispatch(&mut child_process, *lhs).await?;
                         pout.shutdown().await?;
+                        Ok(())
+                    },
+                }?;
+
+                Ok(())
+            }
+            Token::FileRedirectIn { lhs, path } => {
+                let (mut pin, mut backend) = {
+                    let file = process.get_path(path)?.open_file()?;
+
+                    streams::file_redirect_in(file)
+                };
+
+                let mut child_process = process.clone();
+                child_process.stdin = pin.clone();
+
+                try_join! {
+                    backend.run(),
+                    async {
+                        dispatch(&mut child_process, *lhs).await?;
+                        pin.shutdown().await?;
                         Ok(())
                     },
                 }?;
