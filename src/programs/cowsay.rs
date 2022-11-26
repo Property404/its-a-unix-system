@@ -1,17 +1,26 @@
 use crate::process::Process;
 use anyhow::Result;
+use clap::Parser;
 use futures::io::AsyncReadExt;
 use std::io::Write;
 
 const MAX_WIDTH: usize = 40;
 
+/// Have a cow say things
+#[derive(Parser)]
+struct Options {
+    /// The things to say.
+    args: Vec<String>,
+}
+
 pub async fn cowsay(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let text = if args.len() == 1 {
+    let options = Options::try_parse_from(args.into_iter())?;
+    let text = if options.args.is_empty() {
         let mut text = String::new();
         process.stdin.read_to_string(&mut text).await?;
         text
     } else {
-        args.into_iter().skip(1).collect::<Vec<_>>().join(" ")
+        options.args.into_iter().collect::<Vec<_>>().join(" ")
     };
 
     let lines = textwrap::wrap(text.trim(), MAX_WIDTH);

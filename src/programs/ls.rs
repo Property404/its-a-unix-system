@@ -1,14 +1,24 @@
 use crate::process::Process;
 use crate::programs::common::color_picker::{Color, ColorPicker};
 use anyhow::{bail, Result};
+use clap::Parser;
 
 const DIR_COLOR: Color = Color::Blue;
 
+/// List files/directories.
+#[derive(Parser)]
+struct Options {
+    /// Do not ignore hidden files.
+    #[arg(short, long)]
+    all: bool,
+    /// The directory to list.
+    target: Option<String>,
+}
+
 pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let path = if args.len() == 1 {
-        process.cwd.clone()
-    } else {
-        let dir = process.get_path(&args[1])?;
+    let options = Options::try_parse_from(args.into_iter())?;
+    let path = {
+        let dir = process.get_path(&options.target.unwrap_or_else(|| ".".into()))?;
         if !dir.exists()? {
             bail!("ls: no such file or directory: {}", dir.as_str());
         }
@@ -20,8 +30,15 @@ pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
 
     let mut picker = ColorPicker::new(process.stdout.to_terminal().await?);
 
+    // Show '.' and '..', because those don't appear in walk_dir()
+    if options.all {
+        picker.set_color(DIR_COLOR);
+        picker.write(&mut process.stdout, ".\n..\n")?;
+    }
+
     for entity in path.walk_dir()? {
         let entity = entity?;
+        // Don't delve into children.
         if entity.parent().as_ref() != Some(&path) {
             break;
         }
@@ -32,7 +49,9 @@ pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
             picker.reset();
         }
         let display = format!("{}\n", entity.filename());
-        picker.write(&mut process.stdout, &display)?;
+        if options.all || !display.starts_with('.') {
+            picker.write(&mut process.stdout, &display)?;
+        }
     }
     Ok(())
 }

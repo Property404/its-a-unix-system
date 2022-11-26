@@ -1,9 +1,18 @@
 use crate::process::Process;
 use anyhow::{bail, Result};
+use clap::Parser;
 use std::io::Write;
 
+/// Concatenate files.
+#[derive(Parser)]
+struct Options {
+    /// The files to concatenate.
+    files: Vec<String>,
+}
+
 pub async fn cat(process: &mut Process, args: Vec<String>) -> Result<()> {
-    if args.len() == 1 {
+    let options = Options::try_parse_from(args.into_iter())?;
+    if options.files.is_empty() {
         loop {
             if let Ok(line) = process.stdin.get_line().await {
                 process.stdout.write_all(line.as_bytes())?;
@@ -16,7 +25,7 @@ pub async fn cat(process: &mut Process, args: Vec<String>) -> Result<()> {
     }
 
     let mut contents = String::new();
-    for arg in args.into_iter().skip(1) {
+    for arg in options.files.into_iter() {
         let path = process.get_path(arg)?;
         if !path.exists()? {
             bail!("cat: No such file {}", path.as_str());

@@ -1,13 +1,18 @@
 use crate::process::Process;
 use anyhow::Result;
-use std::io::Write;
+use clap::Parser;
+
+/// Create directory.
+#[derive(Parser)]
+struct Options {
+    /// The directories to create.
+    #[arg(required(true))]
+    directories: Vec<String>,
+}
 
 pub async fn mkdir(process: &mut Process, args: Vec<String>) -> Result<()> {
-    if args.len() < 2 {
-        process.stderr.write_all(b"mkdir: missing operand\n")?;
-        return Ok(());
-    }
-    for arg in args.into_iter().skip(1) {
+    let options = Options::try_parse_from(args.into_iter())?;
+    for arg in options.directories.into_iter() {
         process.get_path(arg)?.create_dir_all()?;
     }
     Ok(())

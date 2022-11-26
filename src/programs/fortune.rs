@@ -1,12 +1,18 @@
 use crate::process::Process;
 use anyhow::{bail, Result};
+use clap::Parser;
 use rand::seq::SliceRandom;
 use std::io::Write;
 
 const FORTUNE_FILE: &str = "/usr/share/games/fortunes";
 const REPEAT_FILE: &str = "/run/fortunes.history";
 
-pub async fn fortune(process: &mut Process, _args: Vec<String>) -> Result<()> {
+/// Generate a fortune, quote, or wise adage.
+#[derive(Parser)]
+struct Options {}
+
+pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
+    let _options = Options::try_parse_from(args.into_iter())?;
     // We keep a history of past fortunes so we don't repeat too often.
     let (fortunes_told, mut repeat_file) = {
         let path = process.get_path(REPEAT_FILE)?;

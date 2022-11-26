@@ -1,16 +1,35 @@
 use crate::process::Process;
 use anyhow::{bail, Result};
+use clap::Parser;
+
+/// Remove/unlink a file.
+#[derive(Parser)]
+struct Options {
+    /// Ignore nonexistent files.
+    #[arg(short, long)]
+    force: bool,
+    /// Recursively remove directories and their contents.
+    #[arg(short, long)]
+    recursive: bool,
+    /// The file(s) to remove
+    #[arg(required(true))]
+    files: Vec<String>,
+}
 
 pub async fn rm(process: &mut Process, args: Vec<String>) -> Result<()> {
-    if args.len() < 2 {
-        bail!("rm: missing operand")
-    }
-    for arg in args.into_iter().skip(1) {
-        let path = process.get_path(arg)?;
-        if path.is_dir()? {
+    let options = Options::try_parse_from(args.into_iter())?;
+
+    for file in options.files {
+        let path = process.get_path(file)?;
+
+        if !options.recursive && path.is_dir()? {
             bail!("rm: cannot operate recursively");
         }
-        path.remove_file()?;
+
+        let result = path.remove_file();
+        if !options.force {
+            result?
+        }
     }
     Ok(())
 }

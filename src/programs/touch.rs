@@ -1,13 +1,18 @@
 use crate::process::Process;
 use anyhow::Result;
-use std::io::Write;
+use clap::Parser;
+
+/// Create a file if it does not exist.
+#[derive(Parser)]
+struct Options {
+    /// The file(s) to touch or create.
+    #[arg(required(true))]
+    files: Vec<String>,
+}
 
 pub async fn touch(process: &mut Process, args: Vec<String>) -> Result<()> {
-    if args.len() < 2 {
-        process.stderr.write_all(b"touch: missing file operand\n")?;
-        return Ok(());
-    }
-    for arg in args.into_iter().skip(1) {
+    let options = Options::try_parse_from(args.into_iter())?;
+    for arg in options.files.into_iter() {
         process.get_path(arg)?.create_file()?;
     }
     Ok(())
