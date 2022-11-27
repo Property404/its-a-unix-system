@@ -18,7 +18,7 @@ struct Options {
 pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
     let options = Options::try_parse_from(args.into_iter())?;
     let path = {
-        let dir = process.get_path(&options.target.unwrap_or_else(|| ".".into()))?;
+        let dir = process.get_path(options.target.unwrap_or_else(|| ".".into()))?;
         if !dir.exists()? {
             bail!("ls: no such file or directory: {}", dir.as_str());
         }
