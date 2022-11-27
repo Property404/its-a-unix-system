@@ -3,10 +3,12 @@ use anyhow::Result;
 mod cat;
 mod common;
 mod cowsay;
+mod cp;
 mod echo;
 mod fortune;
 mod ls;
 mod mkdir;
+mod mv;
 mod rm;
 mod shell;
 mod touch;
@@ -35,6 +37,10 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(shell::shell(process, args).await)
     } else if command == "rm" {
         Some(rm::rm(process, args).await)
+    } else if command == "mv" {
+        Some(mv::mv(process, args).await)
+    } else if command == "cp" {
+        Some(cp::cp(process, args).await)
     } else {
         None
     }
