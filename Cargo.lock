@@ -116,6 +116,7 @@ dependencies = [
  "itertools",
  "js-sys",
  "rand",
+ "regex",
  "textwrap",
  "vfs",
  "walkdir",

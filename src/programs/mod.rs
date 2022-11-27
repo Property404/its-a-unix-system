@@ -6,6 +6,7 @@ mod cowsay;
 mod cp;
 mod echo;
 mod fortune;
+mod grep;
 mod ls;
 mod mkdir;
 mod mv;
@@ -41,6 +42,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(mv::mv(process, args).await)
     } else if command == "cp" {
         Some(cp::cp(process, args).await)
+    } else if command == "grep" {
+        Some(grep::grep(process, args).await)
     } else {
         None
     }
