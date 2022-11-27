@@ -13,7 +13,8 @@ fn main() -> Result<()> {
     let mut file = File::create("./src/generated/rootfs.rs").unwrap();
     writeln!(
         &mut file,
-        "#![allow(unused)]
+        "// @generated
+#![allow(unused)]
 use anyhow::Result;
 use vfs::VfsPath;
 
