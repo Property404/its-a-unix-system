@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use std::{
     env,
@@ -12,8 +12,12 @@ const ROOTFS_RS_PATH: &str = "./src/generated/rootfs.rs";
 
 /// Format a rust file.
 fn format_file(path: &str) -> Result<()> {
-    Command::new("rustfmt").arg(path).status()?;
-    Ok(())
+    let status = Command::new("rustfmt").arg(path).status()?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(anyhow!("Rustfmt failed"))
+    }
 }
 
 fn generate_rootfs_rs() -> Result<()> {
@@ -60,8 +64,9 @@ pub fn populate_rootfs(path: &mut VfsPath) -> Result<()> {{"
             }
         }
     }
-
     writeln!(&mut file, "    Ok(())\n}}")?;
+
+    env::set_current_dir("..")?;
 
     Ok(())
 }
