@@ -4,13 +4,20 @@ use std::{
     env,
     fs::File,
     io::{Read, Write},
+    process::Command,
 };
 use walkdir::WalkDir;
 
-fn main() -> Result<()> {
-    // Tell cargo to invalidate the built crate whenever the wrapper changes
-    println!("cargo:rerun-if-changed=rootfs");
-    let mut file = File::create("./src/generated/rootfs.rs").unwrap();
+const ROOTFS_RS_PATH: &str = "./src/generated/rootfs.rs";
+
+/// Format a rust file.
+fn format_file(path: &str) -> Result<()> {
+    Command::new("rustfmt").arg(path).status()?;
+    Ok(())
+}
+
+fn generate_rootfs_rs() -> Result<()> {
+    let mut file = File::create(ROOTFS_RS_PATH).unwrap();
     writeln!(
         &mut file,
         "// @generated
@@ -57,4 +64,12 @@ pub fn populate_rootfs(path: &mut VfsPath) -> Result<()> {{"
     writeln!(&mut file, "    Ok(())\n}}")?;
 
     Ok(())
+}
+
+fn main() -> Result<()> {
+    // Tell cargo to invalidate the built crate whenever the wrapper changes
+    println!("cargo:rerun-if-changed=rootfs");
+
+    generate_rootfs_rs()?;
+    format_file(ROOTFS_RS_PATH)
 }
