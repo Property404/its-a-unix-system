@@ -4,15 +4,19 @@ use clap::Parser;
 use rand::seq::SliceRandom;
 use std::io::Write;
 
-const FORTUNE_FILE: &str = "/usr/share/games/fortunes";
+const FORTUNE_FILE: &str = "/usr/share/games/fortunes/fortunes";
 const REPEAT_FILE: &str = "/run/fortunes.history";
 
 /// Generate a fortune, quote, or wise adage.
 #[derive(Parser)]
-struct Options {}
+struct Options {
+    /// Only show short fortunes.
+    #[arg(short)]
+    short: bool,
+}
 
 pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let _options = Options::try_parse_from(args.into_iter())?;
+    let options = Options::try_parse_from(args.into_iter())?;
     // We keep a history of past fortunes so we don't repeat too often.
     let (fortunes_told, mut repeat_file) = {
         let path = process.get_path(REPEAT_FILE)?;
@@ -42,7 +46,10 @@ pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
         };
 
         // Try to not give a fortune already given.
-        if loops < 5 && fortunes_told.contains(fortune) {
+        if (loops < 5 && fortunes_told.contains(fortune)) ||
+            // Only give short fortunes if requested.
+            (options.short && fortune.len() >= 80)
+        {
             loops += 1;
             continue;
         }
