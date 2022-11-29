@@ -1,5 +1,7 @@
 use crate::{
-    streams::{Backend, InputStream, OutputStream, TerminalReader, TerminalWriter},
+    streams::{
+        input_stream::InputMode, Backend, InputStream, OutputStream, TerminalReader, TerminalWriter,
+    },
     utils,
 };
 use anyhow::{anyhow, Result};
@@ -41,10 +43,16 @@ pub fn standard() -> Result<InitializationTuple> {
 
 pub struct KeyboardTerminalReader {
     callback: Closure<dyn FnMut(KeyboardEvent)>,
+    mode_tx: UnboundedSender<InputMode>,
     stream: UnboundedReceiver<Vec<u8>>,
 }
 
-impl TerminalReader for KeyboardTerminalReader {}
+impl TerminalReader for KeyboardTerminalReader {
+    fn set_mode(&mut self, mode: InputMode) -> Result<()> {
+        self.mode_tx.start_send(mode)?;
+        Ok(())
+    }
+}
 
 impl Stream for KeyboardTerminalReader {
     type Item = Vec<u8>;
@@ -60,6 +68,19 @@ impl FusedStream for KeyboardTerminalReader {
     }
 }
 
+fn unix_term_escape(src: &str) -> String {
+    let mut string = String::with_capacity(src.len());
+    for c in src.chars() {
+        if c as u8 <= 0x1F && c != '\t' && c != '\n' {
+            string.push('^');
+            string.push((c as u8 + 0x40) as char);
+        } else {
+            string.push(c);
+        }
+    }
+    string
+}
+
 // This is a "Sit Still and Look Pretty" struct.
 // Just existing should be enough for it to...do things.
 impl KeyboardTerminalReader {
@@ -68,10 +89,28 @@ impl KeyboardTerminalReader {
     ) -> Result<KeyboardTerminalReader> {
         let document = utils::get_document()?;
         let (sender, receiver) = mpsc::unbounded();
+        let (mode_tx, mut mode_rx) = mpsc::unbounded();
         let mut cbuffer = Vec::<u8>::new();
+
+        let mut mode = InputMode::Line;
 
         let callback = Closure::new(move |e: KeyboardEvent| {
             let key = e.key();
+
+            match mode_rx.try_next() {
+                Ok(Some(new_mode)) => {
+                    mode = new_mode;
+                }
+                _ => {}
+            };
+
+            fn echo(mode: InputMode, content: &str, buffer: &mut Vec<u8>) {
+                buffer.extend(content.as_bytes());
+                if mode == InputMode::Line {
+                    let content = unix_term_escape(content);
+                    utils::js_term_write(&content);
+                }
+            }
 
             if e.ctrl_key() && key == "c" {
                 e.prevent_default();
@@ -82,24 +121,44 @@ impl KeyboardTerminalReader {
                 }
                 utils::js_term_write("^C");
                 cbuffer.clear();
-            } else if key.len() == 1 {
-                utils::js_term_write(&key);
-                cbuffer.extend(key.as_bytes());
+                return;
+            }
+
+            if key.len() == 1 {
+                echo(mode, &key, &mut cbuffer);
                 if "'/?".contains(&key) {
                     e.prevent_default();
                 }
+            } else if key == "Tab" {
+                e.prevent_default();
+                echo(mode, "\t", &mut cbuffer);
+            } else if key == "ArrowLeft" {
+                echo(mode, "\x1b[D", &mut cbuffer);
             } else if key == "Enter" {
-                utils::js_term_write("\n");
-                cbuffer.push(b'\n');
+                echo(mode, "\n", &mut cbuffer);
+                if mode == InputMode::Line {
+                    sender
+                        .unbounded_send(cbuffer.clone())
+                        .expect("Send failed :(");
 
+                    cbuffer.clear();
+                }
+            } else if key == "Backspace" {
+                if mode == InputMode::Line && !cbuffer.is_empty() {
+                    utils::js_term_backspace();
+                    cbuffer.pop();
+                }
+
+                if mode == InputMode::Char {
+                    cbuffer.push(b'\x08')
+                }
+            }
+
+            if mode == InputMode::Char && !cbuffer.is_empty() {
                 sender
                     .unbounded_send(cbuffer.clone())
                     .expect("Send failed :(");
-
                 cbuffer.clear();
-            } else if key == "Backspace" && !cbuffer.is_empty() {
-                utils::js_term_backspace();
-                cbuffer.pop();
             }
         });
         document
@@ -109,6 +168,7 @@ impl KeyboardTerminalReader {
         Ok(Self {
             callback,
             stream: receiver,
+            mode_tx,
         })
     }
 }

@@ -11,6 +11,7 @@ use futures::{
 };
 use std::{
     io,
+    ops::ControlFlow,
     ops::DerefMut,
     pin::Pin,
     sync::{Arc, Mutex},
@@ -19,10 +20,21 @@ use std::{
 
 const NEWLINE: u8 = 0x0a;
 
-pub trait TerminalReader: Sized + FusedStream<Item = Vec<u8>> + Unpin {}
+pub trait TerminalReader: Sized + FusedStream<Item = Vec<u8>> + Unpin {
+    fn set_mode(&mut self, _mode: InputMode) -> Result<()> {
+        Ok(())
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq)]
+pub enum InputMode {
+    Line,
+    Char,
+}
 
 enum InputCommand {
     Shutdown(oneshot::Sender<()>),
+    SetMode(InputMode),
 }
 
 pub struct InputStreamBackend<T: TerminalReader> {
@@ -32,32 +44,48 @@ pub struct InputStreamBackend<T: TerminalReader> {
 }
 
 impl<T: TerminalReader> InputStreamBackend<T> {
-    pub async fn run(&mut self) -> Result<()> {
-        loop {
-            select! {
-                bytes = self.reader.next() => {
-                    match bytes {
-                        Some(bytes) => for byte in bytes {
-                            self.frontend_tx.unbounded_send(byte).expect("TODO: log this error");
-                        },
-                        None => {
-                            self.frontend_tx.close_channel();
-                        }
-                    }
-                },
-                command = self.command_rx.next() => {
-                    let command = command.expect("End of command stream reached!");
-                    match command {
-                        InputCommand::Shutdown(signal) => {
-                            signal.send(()).expect("Could not send shutdown signal");
-                            break;
-                        }
+    pub async fn run_inner(&mut self) -> Result<ControlFlow<()>> {
+        select! {
+            bytes = self.reader.next() => {
+                match bytes {
+                    Some(bytes) => for byte in bytes {
+                        self.frontend_tx.unbounded_send(byte).expect("TODO: log this error");
+                    },
+                    None => {
+                        self.frontend_tx.close_channel();
                     }
                 }
-
+            },
+            command = self.command_rx.next() => {
+                let command = command.expect("End of command stream reached!");
+                match command {
+                    InputCommand::Shutdown(signal) => {
+                        signal.send(()).expect("Could not send shutdown signal");
+                        return Ok(ControlFlow::Break(()));
+                    },
+                    InputCommand::SetMode(mode) => {
+                        self.reader.set_mode(mode)?;
+                    }
+                }
             }
+
         }
 
+        Ok(ControlFlow::Continue(()))
+    }
+
+    pub async fn run(&mut self) -> Result<()> {
+        loop {
+            match self.run_inner().await {
+                Err(e) => {
+                    crate::utils::debug(format!("[Internal error:{}]", e));
+                }
+                Ok(ControlFlow::Break(())) => {
+                    break;
+                }
+                _ => {}
+            }
+        }
         Ok(())
     }
 }
@@ -86,6 +114,12 @@ impl InputStream {
         )
     }
 
+    pub async fn get_char(&mut self) -> Result<char> {
+        let mut buffer = [0; 1];
+        self.read_exact(&mut buffer).await?;
+        Ok(buffer[0] as char)
+    }
+
     pub async fn get_line(&mut self) -> Result<String> {
         let mut line = Vec::new();
         let mut buffer = [0; 1];
@@ -98,6 +132,13 @@ impl InputStream {
             }
             line.push(byte)
         }
+    }
+
+    pub async fn set_mode(&mut self, mode: InputMode) -> Result<()> {
+        // Maybe we should await for confirmation, like in shutdown()?
+        // This is already async after all. We can add it in later.
+        self.command_tx.send(InputCommand::SetMode(mode)).await?;
+        Ok(())
     }
 
     pub async fn shutdown(&mut self) -> Result<()> {

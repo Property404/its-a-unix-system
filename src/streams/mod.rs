@@ -8,7 +8,7 @@ use anyhow::Result;
 pub use file_redirect_in::file_redirect_in;
 pub use file_redirect_out::file_redirect_out;
 use futures::try_join;
-pub use input_stream::{InputStream, InputStreamBackend, TerminalReader};
+pub use input_stream::{InputMode, InputStream, InputStreamBackend, TerminalReader};
 pub use output_stream::{OutputStream, OutputStreamBackend, TerminalWriter};
 pub use pipe::pipe;
 pub use standard_streams::standard;
