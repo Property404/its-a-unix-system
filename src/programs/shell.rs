@@ -1,4 +1,4 @@
-use crate::{process::Process, streams};
+use crate::{process::Process, programs::common::readline::Readline, streams};
 use anyhow::{anyhow, bail, Error, Result};
 use futures::{
     channel::oneshot,
@@ -303,11 +303,16 @@ pub async fn shell(process: &mut Process, args: Vec<String>) -> Result<()> {
         return Ok(());
     }
 
+    let readline = Readline::new(String::from("$ "));
+
     loop {
+        /*
         stdout.write_all(b"$ ").await?;
         stdout.flush().await?;
 
         let line = stdin.get_line().await?;
+        */
+        let line = readline.get_line(&mut stdin, &mut stdout).await?;
         if line.trim().is_empty() {
             continue;
         }

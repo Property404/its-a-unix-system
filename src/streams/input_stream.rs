@@ -21,7 +21,8 @@ use std::{
 const NEWLINE: u8 = 0x0a;
 
 pub trait TerminalReader: Sized + FusedStream<Item = Vec<u8>> + Unpin {
-    fn set_mode(&mut self, _mode: InputMode) -> Result<()> {
+    fn set_mode(&mut self, _mode: InputMode, ready_tx: oneshot::Sender<()>) -> Result<()> {
+        let _ = ready_tx.send(());
         Ok(())
     }
 }
@@ -34,7 +35,7 @@ pub enum InputMode {
 
 enum InputCommand {
     Shutdown(oneshot::Sender<()>),
-    SetMode(InputMode),
+    SetMode(InputMode, oneshot::Sender<()>),
 }
 
 pub struct InputStreamBackend<T: TerminalReader> {
@@ -63,8 +64,8 @@ impl<T: TerminalReader> InputStreamBackend<T> {
                         signal.send(()).expect("Could not send shutdown signal");
                         return Ok(ControlFlow::Break(()));
                     },
-                    InputCommand::SetMode(mode) => {
-                        self.reader.set_mode(mode)?;
+                    InputCommand::SetMode(mode, ready_tx) => {
+                        self.reader.set_mode(mode, ready_tx)?;
                     }
                 }
             }
@@ -135,16 +136,20 @@ impl InputStream {
     }
 
     pub async fn set_mode(&mut self, mode: InputMode) -> Result<()> {
-        // Maybe we should await for confirmation, like in shutdown()?
-        // This is already async after all. We can add it in later.
-        self.command_tx.send(InputCommand::SetMode(mode)).await?;
+        let (ready_tx, ready_rx) = oneshot::channel::<()>();
+        self.command_tx
+            .send(InputCommand::SetMode(mode, ready_tx))
+            .await?;
+        ready_rx.await?;
         Ok(())
     }
 
     pub async fn shutdown(&mut self) -> Result<()> {
-        let (tx, rx) = oneshot::channel::<()>();
-        self.command_tx.send(InputCommand::Shutdown(tx)).await?;
-        rx.await?;
+        let (ready_tx, ready_rx) = oneshot::channel::<()>();
+        self.command_tx
+            .send(InputCommand::Shutdown(ready_tx))
+            .await?;
+        ready_rx.await?;
         Ok(())
     }
 }

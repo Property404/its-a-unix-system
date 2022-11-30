@@ -2,13 +2,15 @@ const terminal = document.getElementById("terminal")
 const ESCAPE_ENUM = {
     COLOR: "COLOR",
     CLEAR: "CLEAR",
-    CURSOR_RELATIVE: "CURSOR_RELATIVE"
+    CURSOR_RELATIVE: "CURSOR_RELATIVE",
+    CLEAR_LINE: "CLEAR_LINE",
 };
 const DIRECTION = {
     UP:"A",
     DOWN:"B",
     RIGHT:"C",
     LEFT: "D",
+    LEFT_ABS: "G",
 };
 // VERY IMPORTANT:
 // 'ct' stands for 'colored terminal', NOT Connecticut
@@ -26,6 +28,7 @@ function match_escape(c) {
     }
 
     let result = null;
+    // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
     if (result = /\[([0-9]+)m/.exec(esc_sequence)) {
         result = {
             type: ESCAPE_ENUM.COLOR,
@@ -35,11 +38,14 @@ function match_escape(c) {
         result = {
             type: ESCAPE_ENUM.CLEAR,
         }
-    } else if (result = /\[([ABCD])/.exec(esc_sequence)) {
-        console.dir(result);
+    } else if (result = /\[([ABCDG])/.exec(esc_sequence)) {
         result = {
             type: ESCAPE_ENUM.CURSOR_RELATIVE,
             direction: result[1]
+        }
+    } else if (result = /\[2K/.exec(esc_sequence)) {
+        result = {
+            type: ESCAPE_ENUM.CLEAR_LINE
         }
     }
 
@@ -82,12 +88,24 @@ function js_term_write(str) {
                     style = "ct-normal";
                 }
                 style += " ";
-            } else if (result.type = ESCAPE_ENUM.CURSOR_RELATIVE) {
+            } else if (result.type === ESCAPE_ENUM.CURSOR_RELATIVE) {
                 if (result.direction === DIRECTION.LEFT) {
-                    cursorx--
+                    if (cursorx > 0) {
+                        cursorx--
+                    }
                 } else if (result.direction === DIRECTION.RIGHT) {
                     cursorx++;
+                } else if (result.direction === DIRECTION.LEFT_ABS) {
+                    cursorx = 0;
+                } else {
+                    console.error("UNIMPLEMENTED ANSI CODE DIRECTION", result.direction);
                 }
+            } else if (result.type == ESCAPE_ENUM.CLEAR_LINE) {
+                if (line_to_clear = terminal.lastChild) {
+                    line_to_clear.replaceChildren()
+                }
+            } else {
+                console.error("UNIMPLEMENTED ANSI CODE", result);
             }
         }
     }
@@ -158,9 +176,6 @@ function write_to_line(line, str) {
     }
 
     if (focus === null) {
-        console.log("[Tacking on]")
-        console.log("cursorx", cursorx)
-        console.log("position", position)
         padding = document.createElement("span");
         padding.textContent = "~".repeat(cursorx-position);
         line.appendChild(padding);
@@ -179,6 +194,12 @@ function write_to_line(line, str) {
             cursorx = 0;
             return write_to_line(new_line, str.substr(i+1));
         }
+        if (c == '\b') {
+            if (cursorx > 0) {
+                cursorx -= 1;
+            }
+            continue;
+        }
         focus.textContent += c;
         cursorx += 1;
         while(adj_span?.textContent === "") {
@@ -191,10 +212,12 @@ function write_to_line(line, str) {
         }
         adj_span.textContent = adj_span.textContent.substr(1);
     }
-    console.log(cursorx);
 }
 
 function write_with_style(str) {
+    if (str === "") {
+        return;
+    }
     const latest_line = line_from_last(0);
     write_to_line(latest_line, str);
     terminal.scrollTop = terminal.scrollHeight;
@@ -214,5 +237,7 @@ function js_term_backspace() {
     if (latest_div.textContent === "") {
         latest_div.remove();
     }
-    cursorx -= 1;
+    if (cursorx > 0) {
+        cursorx -=1;
+    }
 }

@@ -48,8 +48,9 @@ pub struct KeyboardTerminalReader {
 }
 
 impl TerminalReader for KeyboardTerminalReader {
-    fn set_mode(&mut self, mode: InputMode) -> Result<()> {
+    fn set_mode(&mut self, mode: InputMode, ready_tx: oneshot::Sender<()>) -> Result<()> {
         self.mode_tx.start_send(mode)?;
+        let _ = ready_tx.send(());
         Ok(())
     }
 }
@@ -97,12 +98,9 @@ impl KeyboardTerminalReader {
         let callback = Closure::new(move |e: KeyboardEvent| {
             let key = e.key();
 
-            match mode_rx.try_next() {
-                Ok(Some(new_mode)) => {
-                    mode = new_mode;
-                }
-                _ => {}
-            };
+            while let Ok(Some(new_mode)) = mode_rx.try_next() {
+                mode = new_mode;
+            }
 
             fn echo(mode: InputMode, content: &str, buffer: &mut Vec<u8>) {
                 buffer.extend(content.as_bytes());
@@ -125,15 +123,30 @@ impl KeyboardTerminalReader {
             }
 
             if key.len() == 1 {
-                echo(mode, &key, &mut cbuffer);
-                if "'/?".contains(&key) {
-                    e.prevent_default();
+                // Send control characters.
+                if e.ctrl_key() {
+                    let c = key.chars().next().unwrap().to_ascii_uppercase();
+                    let c = c as u8;
+                    // Allow 'R' for refresh
+                    if c > b'@' && c <= b'Z' && c != b'R' {
+                        e.prevent_default();
+                        let mut ctrl_char = String::new();
+                        ctrl_char.push((c - b'@') as char);
+                        echo(mode, &ctrl_char, &mut cbuffer);
+                    }
+                } else {
+                    echo(mode, &key, &mut cbuffer);
+                    if "'/?".contains(&key) {
+                        e.prevent_default();
+                    }
                 }
             } else if key == "Tab" {
                 e.prevent_default();
                 echo(mode, "\t", &mut cbuffer);
             } else if key == "ArrowLeft" {
                 echo(mode, "\x1b[D", &mut cbuffer);
+            } else if key == "ArrowRight" {
+                echo(mode, "\x1b[C", &mut cbuffer);
             } else if key == "Enter" {
                 echo(mode, "\n", &mut cbuffer);
                 if mode == InputMode::Line {
