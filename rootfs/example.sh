@@ -1,4 +1,4 @@
 echo "This is an example shell script"
-echo "Look at this cow!"
+echo "Look at this 🐮!"
 
 fortune | cowsay
