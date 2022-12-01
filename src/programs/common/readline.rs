@@ -52,7 +52,7 @@ impl Readline {
             stdout.write_all(CURSOR_H_HOME.as_bytes()).await?;
             stdout.write_all(self.prompt.as_bytes()).await?;
             stdout.write_all(buffer.as_bytes()).await?;
-            move_cursor_left(stdout, self.prompt.len() + buffer.len() - cursor).await?;
+            move_cursor_left(stdout, buffer.len() - cursor).await?;
             stdout.flush().await?;
 
             let c = stdin.get_char().await?;
