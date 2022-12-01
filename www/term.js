@@ -116,7 +116,7 @@ function line_from_last(n) {
     let latest_line = terminal.lastChild;
 
     if (latest_line === null) {
-        latest_line = document.createElement("span");
+        latest_line = document.createElement("div");
         terminal.appendChild(latest_line);
     }
 
@@ -188,9 +188,8 @@ function write_to_line(line, str) {
     for (i in str) {
         const c = str[i];
         if (c == '\n') {
-            let new_line = document.createElement("span");
+            let new_line = document.createElement("div");
             terminal.insertBefore(new_line, line.nextSibling);
-            terminal.insertBefore(document.createTextNode("\n"), new_line);
             cursorx = 0;
             return write_to_line(new_line, str.substr(i+1));
         }
