@@ -1,15 +1,13 @@
-use crate::streams::{InputMode, InputStream, OutputStream};
+use crate::{
+    streams::{InputMode, InputStream, OutputStream},
+    AnsiCode,
+};
 use anyhow::Result;
 use futures::io::AsyncWriteExt;
 
-const CURSOR_H_HOME: &str = "\x1b[G";
-const CURSOR_LEFT: &str = "\x1b[D";
-//const CURSOR_RIGHT: &str = "\x1b[C";
-const CLEAR_LINE: &str = "\x1b[2K";
-
 async fn move_cursor_left(stdout: &mut OutputStream, n: usize) -> Result<()> {
     for _ in 0..n {
-        stdout.write_all(CURSOR_LEFT.as_bytes()).await?;
+        stdout.write_all(&AnsiCode::CursorLeft.to_bytes()).await?;
     }
     Ok(())
 }
@@ -48,8 +46,10 @@ impl Readline {
         let mut cursor = 0;
 
         loop {
-            stdout.write_all(CLEAR_LINE.as_bytes()).await?;
-            stdout.write_all(CURSOR_H_HOME.as_bytes()).await?;
+            stdout.write_all(&AnsiCode::ClearLine.to_bytes()).await?;
+            stdout
+                .write_all(&AnsiCode::CursorResetColumn.to_bytes())
+                .await?;
             stdout.write_all(self.prompt.as_bytes()).await?;
             stdout.write_all(buffer.as_bytes()).await?;
             move_cursor_left(stdout, buffer.len() - cursor).await?;
@@ -93,7 +93,9 @@ impl Readline {
                 // An interesting bug appears without this next line.
                 // The character behind the cursor will be deleted!
                 // The bug probably lies in term.js
-                stdout.write_all(CURSOR_H_HOME.as_bytes()).await?;
+                stdout
+                    .write_all(&AnsiCode::CursorResetColumn.to_bytes())
+                    .await?;
                 stdout.write_all(b"\n").await?;
                 return Ok(buffer);
             // Backspace

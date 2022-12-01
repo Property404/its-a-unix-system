@@ -2,7 +2,7 @@ use crate::{
     streams::{
         input_stream::InputMode, Backend, InputStream, OutputStream, TerminalReader, TerminalWriter,
     },
-    utils,
+    utils, AnsiCode,
 };
 use anyhow::{anyhow, Result};
 use futures::{
@@ -144,9 +144,13 @@ impl KeyboardTerminalReader {
                 e.prevent_default();
                 echo(mode, "\t", &mut cbuffer);
             } else if key == "ArrowLeft" {
-                echo(mode, "\x1b[D", &mut cbuffer);
+                echo(mode, &AnsiCode::CursorLeft.to_string(), &mut cbuffer);
             } else if key == "ArrowRight" {
-                echo(mode, "\x1b[C", &mut cbuffer);
+                echo(mode, &AnsiCode::CursorRight.to_string(), &mut cbuffer);
+            } else if key == "ArrowUp" {
+                echo(mode, &AnsiCode::CursorUp.to_string(), &mut cbuffer);
+            } else if key == "ArrowDown" {
+                echo(mode, &AnsiCode::CursorDown.to_string(), &mut cbuffer);
             } else if key == "Enter" {
                 echo(mode, "\n", &mut cbuffer);
                 if mode == InputMode::Line {

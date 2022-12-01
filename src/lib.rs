@@ -1,9 +1,11 @@
+mod ansi_codes;
 mod filesystem;
 mod generated;
 mod process;
 mod programs;
 mod streams;
 mod utils;
+use ansi_codes::AnsiCode;
 use anyhow::Result;
 use futures::try_join;
 use process::Process;
