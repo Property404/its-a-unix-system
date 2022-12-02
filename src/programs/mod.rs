@@ -13,6 +13,7 @@ mod mv;
 mod rm;
 mod shell;
 mod sponge;
+mod tee;
 mod touch;
 
 pub use shell::shell;
@@ -47,6 +48,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(grep::grep(process, args).await)
     } else if command == "sponge" {
         Some(sponge::sponge(process, args).await)
+    } else if command == "tee" {
+        Some(tee::tee(process, args).await)
     } else {
         None
     }
