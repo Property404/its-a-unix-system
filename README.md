@@ -26,19 +26,21 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 
 ## Example
 
-```sh
+```
 $ fortune -s | cowsay
- ___________________________
-< You look beautiful today. >
- ---------------------------
+ _____________________________________
+< Your mother is disappointed in you. >
+ -------------------------------------
          \    ^__^
           \   (oo)\_______
               (__)\       )\/\
                   ||----w |
                   ||     ||
-$ echo "Wow what a great fortune"
+$ # We also have file redirect
+$ echo "Wow what a great fortune" > file
+$ # We could do `cat file` as well
+$ cat < file
 Wow what a great fortune
-$
 ```
 
 ## Running locally
