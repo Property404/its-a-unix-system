@@ -92,7 +92,13 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
     let mut quote_level = QuoteType::None;
     let mut tokens = Vec::new();
     let mut buffer = String::new();
-    for c in source.chars() {
+    let mut source = source.chars();
+    let mut c = None;
+    loop {
+        let last_char = c;
+        c = source.next();
+        let Some(c) = c else {break;};
+
         match quote_level {
             QuoteType::None => {
                 if c == '\'' {
@@ -111,7 +117,17 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
                     if c == '|' {
                         tokens.push(BasicToken::Pipe);
                     } else if c == '>' {
-                        tokens.push(BasicToken::FileRedirectOut { append: false });
+                        if last_char == Some('>') {
+                            if !matches!(
+                                tokens.pop(),
+                                Some(BasicToken::FileRedirectOut { append: false })
+                            ) {
+                                bail!("Syntax error: '>' symbol unexpected here");
+                            }
+                            tokens.push(BasicToken::FileRedirectOut { append: true });
+                        } else {
+                            tokens.push(BasicToken::FileRedirectOut { append: false });
+                        }
                     } else if c == '<' {
                         tokens.push(BasicToken::FileRedirectIn);
                     }
@@ -201,10 +217,11 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
             }
             Token::FileRedirectOut { lhs, append, path } => {
                 let (pout, mut backend) = {
-                    let file = if append {
-                        process.get_path(path)?.append_file()?
+                    let path = process.get_path(path)?;
+                    let file = if append && path.exists()? {
+                        path.append_file()?
                     } else {
-                        process.get_path(path)?.create_file()?
+                        path.create_file()?
                     };
 
                     streams::file_redirect_out(file)
@@ -329,7 +346,7 @@ mod test {
     use super::*;
 
     #[test]
-    fn tokenize_source() {
+    fn tokenize_pipe() {
         let source = "echo\thi '|'   there | cowsay";
         let tokens = tokenize(source).unwrap();
         let expected = vec![
@@ -339,6 +356,27 @@ mod test {
             BasicToken::Value("there".into()),
             BasicToken::Pipe,
             BasicToken::Value("cowsay".into()),
+        ];
+        assert_eq!(tokens, expected);
+    }
+
+    #[test]
+    fn tokenize_fileio() {
+        let source = "fortune >> waa";
+        let tokens = tokenize(source).unwrap();
+        let expected = vec![
+            BasicToken::Value("fortune".into()),
+            BasicToken::FileRedirectOut { append: true },
+            BasicToken::Value("waa".into()),
+        ];
+        assert_eq!(tokens, expected);
+
+        let source = "fortune > waa";
+        let tokens = tokenize(source).unwrap();
+        let expected = vec![
+            BasicToken::Value("fortune".into()),
+            BasicToken::FileRedirectOut { append: false },
+            BasicToken::Value("waa".into()),
         ];
         assert_eq!(tokens, expected);
     }

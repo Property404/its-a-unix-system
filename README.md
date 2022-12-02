@@ -17,7 +17,6 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 * File editor
 * Readline history
 * Tab completion
-* Append-to-file(`>>`)
 * Executing of scripts as commands in `/bin`
 
 ### Bugs
