@@ -18,6 +18,11 @@ html, body {
     white-space: pre-wrap;
     overflow-y: hidden;
     font-family: monospace;
+    font-size: 1rem;
+}
+
+#terminal div {
+    min-height: 1rem;
 }
 
 .ct-normal {}
