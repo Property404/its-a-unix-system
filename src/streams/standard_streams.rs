@@ -127,8 +127,8 @@ impl KeyboardTerminalReader {
                 if e.ctrl_key() {
                     let c = key.chars().next().unwrap().to_ascii_uppercase();
                     let c = c as u8;
-                    // Allow 'R' for refresh
-                    if c > b'@' && c <= b'Z' && c != b'R' {
+                    // Allow 'R' and 'I' for refresh and inspector
+                    if c > b'@' && c <= b'Z' && c != b'R' && c != b'I' {
                         e.prevent_default();
                         let mut ctrl_char = String::new();
                         ctrl_char.push((c - b'@') as char);
