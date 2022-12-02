@@ -16,6 +16,13 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 * Cursor
 * File editor
 * Readline history
+* Tab completion
+* Append-to-file(`>>`)
+* Executing of scripts as commands in `/bin`
+
+### Bugs
+
+* `echo -n hello` shows nothing, due to Readline erasing entire line
 
 ## Example
 
