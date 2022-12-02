@@ -4,7 +4,8 @@ use clap::Parser;
 use rand::seq::SliceRandom;
 use std::io::Write;
 
-const FORTUNE_FILE: &str = "/usr/share/games/fortunes/fortunes";
+const NORMAL_FORTUNES: &str = "/usr/share/games/fortunes/fortunes";
+const RISQUE_FORTUNES: &str = "/usr/share/games/fortunes/risque";
 const REPEAT_FILE: &str = "/run/fortunes.history";
 
 /// Generate a fortune, quote, or wise adage.
@@ -13,6 +14,9 @@ struct Options {
     /// Only show short fortunes.
     #[arg(short)]
     short: bool,
+    /// Include risqué fortunes.
+    #[arg(short = 'r')]
+    risque: bool,
 }
 
 pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
@@ -35,8 +39,13 @@ pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
     };
 
     let mut fortunes = String::new();
-    let mut file = process.get_path(FORTUNE_FILE)?.open_file()?;
+    let mut file = process.get_path(NORMAL_FORTUNES)?.open_file()?;
     file.read_to_string(&mut fortunes)?;
+    if options.risque {
+        let mut file = process.get_path(RISQUE_FORTUNES)?.open_file()?;
+        fortunes.push('\n');
+        file.read_to_string(&mut fortunes)?;
+    }
     let fortunes = fortunes.trim().split("\n\n").collect::<Vec<&str>>();
 
     let mut loops = 0;
