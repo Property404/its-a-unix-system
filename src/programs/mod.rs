@@ -12,6 +12,7 @@ mod mkdir;
 mod mv;
 mod rm;
 mod shell;
+mod sponge;
 mod touch;
 
 pub use shell::shell;
@@ -44,6 +45,8 @@ pub async fn get_program(process: &mut Process, args: Vec<String>) -> Option<Res
         Some(cp::cp(process, args).await)
     } else if command == "grep" {
         Some(grep::grep(process, args).await)
+    } else if command == "sponge" {
+        Some(sponge::sponge(process, args).await)
     } else {
         None
     }
