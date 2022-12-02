@@ -101,6 +101,8 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
                 } else if c == '"' {
                     quote_level = QuoteType::Double;
                     continue;
+                } else if c == '#' {
+                    break;
                 } else if [' ', '\n', '\t', '|', '>', '<'].contains(&c) {
                     if !buffer.is_empty() {
                         tokens.push(BasicToken::Value(buffer.clone()));
@@ -254,7 +256,11 @@ async fn run_script(process: &mut Process, source: &str) -> Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        let root_token = parse(tokenize(line)?)?;
+        let tokens = tokenize(line)?;
+        if tokens.is_empty() {
+            continue;
+        }
+        let root_token = parse(tokens)?;
 
         let (abort_channel_tx, mut abort_channel_rx) = oneshot::channel();
         let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel();
