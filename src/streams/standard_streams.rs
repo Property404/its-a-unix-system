@@ -205,7 +205,9 @@ pub struct HtmlTerminalWriter {}
 
 impl TerminalWriter for HtmlTerminalWriter {
     fn send(&mut self, content: &str) -> Result<()> {
-        utils::js_term_write(content);
+        if !content.is_empty() {
+            utils::js_term_write(content);
+        }
         Ok(())
     }
 

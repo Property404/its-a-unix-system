@@ -63,8 +63,10 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
                             }
                         },
                         Command::Flush => {
-                            self.write(&buffer)?;
-                            buffer.clear();
+                            if ! buffer.is_empty() {
+                                self.write(&buffer)?;
+                                buffer.clear();
+                            }
                         },
                         Command::Shutdown(signal) => {
                             self.writer.shutdown()?;
