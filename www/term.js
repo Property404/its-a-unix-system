@@ -7,6 +7,7 @@ const ESCAPE_ENUM = {
     CLEAR: "CLEAR",
     CURSOR_RELATIVE: "CURSOR_RELATIVE",
     CLEAR_LINE: "CLEAR_LINE",
+    CLEAR_TO_END: "CLEAR_TO_END",
 };
 const DIRECTION = {
     UP:"A",
@@ -21,6 +22,40 @@ let style = "ct-normal";
 let esc_sequence = null;
 let cursorx = 0;
 
+function get_pos_in_line(line, x) {
+    let adj_span = null;
+    let hit = false;
+    let position = 0;
+
+    for (child of line.children) {
+        if (child.id === cursor.id) {
+            continue;
+        }
+        const next_position = position + child.textContent.length;
+        if (next_position >= x) {
+            const pos = x - position;
+            const content = child.textContent;
+            hit = true;
+            // Split spans
+            // Can be optimized, probably.
+            child.textContent = content.substr(0, pos);
+            if (pos != content.length) {
+                adj_span = document.createElement("span");
+                adj_span.textContent = content.substr(pos);
+                adj_span.className = child.className;
+                line.insertBefore(adj_span, child.nextSibling);
+            }
+            return child;
+        }
+        position = next_position;
+    }
+
+    padding = document.createElement("span");
+    padding.textContent = "*".repeat(x-position);
+    line.appendChild(padding);
+    return padding;
+}
+
 function move_cursor_x(x) {
     if (x < 0) {
         return;
@@ -28,42 +63,10 @@ function move_cursor_x(x) {
     cursorx = x;
     hidey_hole.appendChild(cursor);
 
-    let adj_span = null;
-    let hit = false;
-    let position = 0;
-
     const line = line_from_last(0);
+    const span = get_pos_in_line(line, cursorx);
 
-    for (child of line.children) {
-        const next_position = position + child.textContent.length;
-        if (next_position >= cursorx) {
-            const pos = cursorx - position;
-            const content = child.textContent;
-            hit = true;
-            // Split spans
-            // Can be optimized, probably.
-            child.textContent = content.substr(0, pos);
-            line.insertBefore(cursor, child.nextSibling);
-            if (pos != content.length) {
-                adj_span = document.createElement("span");
-                adj_span.textContent = content.substr(pos);
-                adj_span.className = child.className;
-                line.insertBefore(adj_span, cursor.nextSibling);
-            }
-            break;
-        }
-        position = next_position;
-    }
-
-    if (focus === null) {
-        padding = document.createElement("span");
-        padding.textContent = "*".repeat(cursorx-position);
-        line.appendChild(padding);
-        
-        line.appendChild(cursor);
-    }
-
-    line.insertBefore(cursor, adj_span);
+    line.insertBefore(cursor, span.nextSibling);
 }
 
 function match_escape(c) {
@@ -94,6 +97,10 @@ function match_escape(c) {
     } else if (result = /\[2K/.exec(esc_sequence)) {
         result = {
             type: ESCAPE_ENUM.CLEAR_LINE
+        }
+    } else if (result = /\[0K/.exec(esc_sequence)) {
+        result = {
+            type: ESCAPE_ENUM.CLEAR_TO_END
         }
     }
 
@@ -152,6 +159,15 @@ function js_term_write(str) {
                 if (line_to_clear = terminal.lastChild) {
                     line_to_clear.replaceChildren()
                 }
+            } else if (result.type == ESCAPE_ENUM.CLEAR_TO_END) {
+                move_cursor_x(cursorx);
+                const line = cursor.parentElement;
+                let element = cursor.nextSibling;
+                while (element !== null) {
+                    temp = element;
+                    element = element.nextSibling;
+                    line.removeChild(temp);
+                }
             } else {
                 console.error("UNIMPLEMENTED ANSI CODE", result);
             }
@@ -196,7 +212,6 @@ function line_from_last(n) {
 
 
 function write_to_line(line, str) {
-    let adj_span = null;
     let focus = null;
     let position = 0;
 
@@ -205,40 +220,10 @@ function write_to_line(line, str) {
     }
 
     hidey_hole.appendChild(cursor);
-    for (child of line.children) {
-        // Note to self: Can you directly compare DOM nodes?
-        // Find out later
-        if (child.id === cursor.id) {
-            continue;
-        }
-        const next_position = position + child.textContent.length;
-        if (next_position >= cursorx) {
-            const pos = cursorx - position;
-            const content = child.textContent;
-            // Split spans
-            // Can be optimized, probably.
-            child.textContent = content.substr(0, pos);
-            focus = document.createElement("span");
-            focus.className = style;
-            adj_span = document.createElement("span");
-            adj_span.textContent = content.substr(pos+ 1);
-            adj_span.className = child.className;
-            line.insertBefore(focus, child.nextSibling);
-            line.insertBefore(adj_span, focus.nextSibling);
-            break;
-        }
-        position = next_position;
-    }
-
-    if (focus === null) {
-        padding = document.createElement("span");
-        padding.textContent = "~".repeat(cursorx-position);
-        line.appendChild(padding);
-        
-        focus = document.createElement("span");
-        focus.className = style;
-        line.appendChild(focus);
-    }
+    const adj_span = get_pos_in_line(line, cursorx).nextSibling;
+    focus = document.createElement("span");
+    focus.className = style;
+    line.insertBefore(focus, adj_span);
 
     for (let i = 0; i < str.length; i++) {
         const c = str[i];

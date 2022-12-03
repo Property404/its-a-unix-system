@@ -12,6 +12,13 @@ async fn move_cursor_left(stdout: &mut OutputStream, n: usize) -> Result<()> {
     Ok(())
 }
 
+async fn move_cursor_right(stdout: &mut OutputStream, n: usize) -> Result<()> {
+    for _ in 0..n {
+        stdout.write_all(&AnsiCode::CursorRight.to_bytes()).await?;
+    }
+    Ok(())
+}
+
 /// A GNU Readline-like implementation.
 pub struct Readline {
     /// The prompt to show, e.g "$ "
@@ -45,12 +52,12 @@ impl Readline {
         let mut buffer = String::new();
         let mut cursor = 0;
 
+        stdout.write_all(self.prompt.as_bytes()).await?;
         loop {
-            stdout.write_all(&AnsiCode::ClearLine.to_bytes()).await?;
+            move_cursor_left(stdout, cursor).await?;
             stdout
-                .write_all(&AnsiCode::CursorResetColumn.to_bytes())
+                .write_all(&AnsiCode::ClearToEndOfLine.to_bytes())
                 .await?;
-            stdout.write_all(self.prompt.as_bytes()).await?;
             stdout.write_all(buffer.as_bytes()).await?;
             move_cursor_left(stdout, buffer.len() - cursor).await?;
             stdout.flush().await?;
@@ -63,11 +70,15 @@ impl Readline {
                 match stdin.get_char().await? {
                     'C' => {
                         if cursor < buffer.len() {
+                            move_cursor_right(stdout, 1).await?;
                             cursor += 1;
                         }
                     }
                     'D' => {
-                        cursor = cursor.saturating_sub(1);
+                        if cursor > 0 {
+                            move_cursor_left(stdout, 1).await?;
+                            cursor -= 1;
+                        }
                     }
                     _ => {}
                 }
@@ -76,16 +87,22 @@ impl Readline {
 
             // ^A
             if c == '\x01' {
+                move_cursor_left(stdout, cursor).await?;
                 cursor = 0;
             // ^B
             } else if c == '\x02' {
+                if cursor > 0 {
+                    move_cursor_left(stdout, 1).await?;
+                }
                 cursor = cursor.saturating_sub(1);
             // ^E
             } else if c == '\x05' {
+                move_cursor_right(stdout, buffer.len() - cursor).await?;
                 cursor = buffer.len();
             // ^F
             } else if c == '\x06' {
                 if cursor < buffer.len() {
+                    move_cursor_right(stdout, 1).await?;
                     cursor += 1;
                 }
             // Newline (\n or ^J)
@@ -103,10 +120,12 @@ impl Readline {
                 if cursor > 0 {
                     cursor -= 1;
                     buffer.remove(cursor);
+                    move_cursor_left(stdout, 1).await?;
                 }
             } else {
                 buffer.insert(cursor, c);
                 cursor += 1;
+                move_cursor_right(stdout, 1).await?;
             }
         }
     }

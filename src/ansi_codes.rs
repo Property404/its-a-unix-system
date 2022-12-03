@@ -10,6 +10,7 @@ pub enum AnsiCode {
     CursorLeft,
     CursorResetColumn,
     ClearLine,
+    ClearToEndOfLine,
 }
 
 impl AnsiCode {
@@ -28,6 +29,7 @@ impl ToString for AnsiCode {
             AnsiCode::CursorLeft => "\x1b[D".into(),
             AnsiCode::CursorResetColumn => "\x1b[G".into(),
             AnsiCode::ClearLine => "\x1b[2K".into(),
+            AnsiCode::ClearToEndOfLine => "\x1b[0K".into(),
         }
     }
 }
