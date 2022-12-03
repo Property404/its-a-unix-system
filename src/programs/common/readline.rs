@@ -4,6 +4,8 @@ use crate::{
 };
 use anyhow::Result;
 use futures::io::AsyncWriteExt;
+use std::io::Read;
+use vfs::VfsPath;
 
 async fn move_cursor_left(stdout: &mut OutputStream, n: usize) -> Result<()> {
     for _ in 0..n {
@@ -19,19 +21,60 @@ async fn move_cursor_right(stdout: &mut OutputStream, n: usize) -> Result<()> {
     Ok(())
 }
 
-/// A GNU Readline-like implementation.
-pub struct Readline {
-    /// The prompt to show, e.g "$ "
-    prompt: String,
+/// This trait indicates that a struct can record or retrieve command history.
+pub trait History {
+    fn get_records(&self) -> Result<Vec<String>>;
+    fn add_record(&self, record: &str) -> Result<()>;
 }
 
-impl Readline {
-    pub fn new(prompt: String) -> Self {
-        Self { prompt }
+/// Read and write history to/from a file.
+pub struct FileBasedHistory {
+    file: VfsPath,
+}
+
+impl FileBasedHistory {
+    pub fn new(file: VfsPath) -> Self {
+        Self { file }
+    }
+}
+
+impl History for FileBasedHistory {
+    fn get_records(&self) -> Result<Vec<String>> {
+        if !self.file.exists()? {
+            self.file.create_file()?;
+        }
+        let mut file = self.file.open_file()?;
+        let mut records = String::new();
+        file.read_to_string(&mut records)?;
+        Ok(records.trim().split('\n').map(String::from).collect())
+    }
+
+    fn add_record(&self, record: &str) -> Result<()> {
+        let mut file = if self.file.exists()? {
+            self.file.append_file()?
+        } else {
+            self.file.create_file()?
+        };
+        std::io::Write::write_all(&mut file, record.as_bytes())?;
+        std::io::Write::write_all(&mut file, b"\n")?;
+        Ok(())
+    }
+}
+
+/// A GNU Readline-like implementation.
+pub struct Readline<T: History> {
+    /// The prompt to show, e.g "$ "
+    prompt: String,
+    history: T,
+}
+
+impl<T: History> Readline<T> {
+    pub fn new(prompt: String, history: T) -> Self {
+        Self { prompt, history }
     }
     /// Get next line.
     pub async fn get_line(
-        &self,
+        &mut self,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
     ) -> Result<String> {
@@ -41,6 +84,10 @@ impl Readline {
 
         stdin.set_mode(InputMode::Line).await?;
 
+        if let Ok(result) = result.as_ref() {
+            self.history.add_record(result)?;
+        }
+
         result
     }
 
@@ -49,11 +96,17 @@ impl Readline {
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
     ) -> Result<String> {
-        let mut buffer = String::new();
         let mut cursor = 0;
+        let mut buffers = self.history.get_records()?;
+        buffers.push(String::new());
+        let mut buffer_index = buffers.len() - 1;
 
         stdout.write_all(self.prompt.as_bytes()).await?;
         loop {
+            let buffer = buffers
+                .get_mut(buffer_index)
+                .expect("History out of bounds");
+
             move_cursor_left(stdout, cursor).await?;
             stdout
                 .write_all(&AnsiCode::ClearToEndOfLine.to_bytes())
@@ -68,12 +121,32 @@ impl Readline {
                 let _ = stdin.get_char().await?;
 
                 match stdin.get_char().await? {
+                    // Up/Down arrow - Move up/down in history
+                    mode @ ('A' | 'B') => {
+                        if mode == 'A' && buffer_index > 0 {
+                            buffer_index -= 1;
+                        } else if mode == 'B' && buffer_index < buffers.len() - 1 {
+                            buffer_index += 1
+                        } else {
+                            continue;
+                        }
+
+                        let len = buffers[buffer_index].len();
+                        if cursor >= len {
+                            move_cursor_left(stdout, cursor - len).await?;
+                        } else {
+                            move_cursor_right(stdout, len - cursor).await?;
+                        }
+                        cursor = len;
+                    }
+                    // Right arrow - move right
                     'C' => {
                         if cursor < buffer.len() {
                             move_cursor_right(stdout, 1).await?;
                             cursor += 1;
                         }
                     }
+                    // Left arrow - move left
                     'D' => {
                         if cursor > 0 {
                             move_cursor_left(stdout, 1).await?;
@@ -114,7 +187,8 @@ impl Readline {
                     .write_all(&AnsiCode::CursorResetColumn.to_bytes())
                     .await?;
                 stdout.write_all(b"\n").await?;
-                return Ok(buffer);
+                // Todo: I think there's a way to move out of the vector instead of cloning.
+                return Ok(buffer.clone());
             // Backspace
             } else if c == '\x08' {
                 if cursor > 0 {

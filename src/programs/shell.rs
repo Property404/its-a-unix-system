@@ -1,4 +1,8 @@
-use crate::{process::Process, programs::common::readline::Readline, streams};
+use crate::{
+    process::Process,
+    programs::common::readline::{FileBasedHistory, Readline},
+    streams,
+};
 use anyhow::{anyhow, bail, Error, Result};
 use futures::{
     channel::oneshot,
@@ -8,6 +12,8 @@ use futures::{
     stream::{AbortHandle, Abortable},
     try_join,
 };
+
+const HISTORY_FILE: &str = "/etc/.sh_history";
 
 #[derive(Debug, PartialEq, Eq)]
 enum BasicToken {
@@ -326,7 +332,8 @@ pub async fn shell(process: &mut Process, args: Vec<String>) -> Result<()> {
         return Ok(());
     }
 
-    let readline = Readline::new(String::from("$ "));
+    let readline_history = FileBasedHistory::new(process.get_path(HISTORY_FILE)?);
+    let mut readline = Readline::new(String::from("$ "), readline_history);
 
     loop {
         let line = readline.get_line(&mut stdin, &mut stdout).await?;

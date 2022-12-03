@@ -8,13 +8,12 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 * Pipes and file redirect
 * File system via [rust-vfs](https://github.com/manuel-woelker/rust-vfs)
 * Basic scripting support (try `sh example.sh`)
-* Basic GNU Readline-like features (^A, ^E)
+* Basic GNU Readline-like features (^A, ^E, arrowkeys, history)
 * Basic ANSI escape code support, including some colors
 
 ### Not included (yet)
 
 * File editor
-* Readline history
 * Tab completion
 * Executing of scripts as commands in `/bin`
 
