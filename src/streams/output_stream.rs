@@ -50,12 +50,16 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
                 command = self.rx.next() => {
                     match command.expect("End of command channel") {
                         Command::Bytes(bytes) => {
+                            let mut flush = false;
                             for byte in bytes {
                                 buffer.push(byte);
                                 if byte == NEWLINE || byte == CARRIAGE_RETURN {
-                                    self.write(&buffer)?;
-                                    buffer.clear();
+                                    flush = true;
                                 }
+                            }
+                            if flush {
+                                self.write(&buffer)?;
+                                buffer.clear();
                             }
                         },
                         Command::Flush => {
