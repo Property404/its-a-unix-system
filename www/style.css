@@ -25,6 +25,11 @@ html, body {
     min-height: 1rem;
 }
 
+#cursor {
+    display:inline-block;
+    max-width: 0;
+}
+
 .ct-normal {}
 .ct-black { color: black; }
 .ct-white { color: white; }

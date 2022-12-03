@@ -13,7 +13,6 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 
 ### Not included (yet)
 
-* Cursor
 * File editor
 * Readline history
 * Tab completion

@@ -1,4 +1,7 @@
 const terminal = document.getElementById("terminal")
+const hidey_hole = document.getElementById("hidey-hole");
+const cursor = document.getElementById("cursor");
+
 const ESCAPE_ENUM = {
     COLOR: "COLOR",
     CLEAR: "CLEAR",
@@ -17,6 +20,51 @@ const DIRECTION = {
 let style = "ct-normal";
 let esc_sequence = null;
 let cursorx = 0;
+
+function move_cursor_x(x) {
+    if (x < 0) {
+        return;
+    }
+    cursorx = x;
+    hidey_hole.appendChild(cursor);
+
+    let adj_span = null;
+    let hit = false;
+    let position = 0;
+
+    const line = line_from_last(0);
+
+    for (child of line.children) {
+        const next_position = position + child.textContent.length;
+        if (next_position >= cursorx) {
+            const pos = cursorx - position;
+            const content = child.textContent;
+            hit = true;
+            // Split spans
+            // Can be optimized, probably.
+            child.textContent = content.substr(0, pos);
+            line.insertBefore(cursor, child.nextSibling);
+            if (pos != content.length) {
+                adj_span = document.createElement("span");
+                adj_span.textContent = content.substr(pos);
+                adj_span.className = child.className;
+                line.insertBefore(adj_span, cursor.nextSibling);
+            }
+            break;
+        }
+        position = next_position;
+    }
+
+    if (focus === null) {
+        padding = document.createElement("span");
+        padding.textContent = "*".repeat(cursorx-position);
+        line.appendChild(padding);
+        
+        line.appendChild(cursor);
+    }
+
+    line.insertBefore(cursor, adj_span);
+}
 
 function match_escape(c) {
     const MAX_SIZE = 5;
@@ -91,10 +139,10 @@ function js_term_write(str) {
             } else if (result.type === ESCAPE_ENUM.CURSOR_RELATIVE) {
                 if (result.direction === DIRECTION.LEFT) {
                     if (cursorx > 0) {
-                        cursorx--
+                        cursorx -= 1;
                     }
                 } else if (result.direction === DIRECTION.RIGHT) {
-                    cursorx++;
+                    cursorx += 1;
                 } else if (result.direction === DIRECTION.LEFT_ABS) {
                     cursorx = 0;
                 } else {
@@ -110,6 +158,7 @@ function js_term_write(str) {
         }
     }
     write_with_style(buffer);
+    move_cursor_x(cursorx);
 }
 
 function line_from_last(n) {
@@ -155,12 +204,18 @@ function write_to_line(line, str) {
         return;
     }
 
+    hidey_hole.appendChild(cursor);
     for (child of line.children) {
+        // Note to self: Can you directly compare DOM nodes?
+        // Find out later
+        if (child.id === cursor.id) {
+            continue;
+        }
         const next_position = position + child.textContent.length;
         if (next_position >= cursorx) {
             const pos = cursorx - position;
             const content = child.textContent;
-            // Split divs
+            // Split spans
             // Can be optimized, probably.
             child.textContent = content.substr(0, pos);
             focus = document.createElement("span");
@@ -201,10 +256,13 @@ function write_to_line(line, str) {
             continue;
         }
         focus.textContent += c;
-        cursorx += 1;
+        cursorx += 1
         while(adj_span?.textContent === "") {
             let temp = adj_span;
             adj_span = adj_span.nextSibling;
+            if (adj_span?.id === cursor.id) {
+                adj_span = adj_span.nextSibling;
+            }
             line.removeChild(temp);
         }
         if (adj_span === null) {
@@ -225,11 +283,14 @@ function write_with_style(str) {
 
 function js_term_clear() {
     terminal.innerHTML = "";
-    cursorx = 0;
+    move_cursor_x(0);
 }
 
 function js_term_backspace() {
-    const latest_div = terminal.lastChild.lastChild;
+    let latest_div = terminal.lastChild.lastChild;
+    if (latest_div === cursor) {
+        latest_div = latest_div.previousSibling;
+    }
     const text = latest_div.textContent
     if (text !== "") {
         latest_div.textContent = text.substr(0, text.length - 1);
@@ -237,7 +298,5 @@ function js_term_backspace() {
     if (latest_div.textContent === "") {
         latest_div.remove();
     }
-    if (cursorx > 0) {
-        cursorx -=1;
-    }
+    move_cursor_x(cursorx - 1);
 }
