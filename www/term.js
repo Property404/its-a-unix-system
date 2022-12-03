@@ -185,13 +185,14 @@ function write_to_line(line, str) {
         line.appendChild(focus);
     }
 
-    for (i in str) {
+    for (let i = 0; i < str.length; i++) {
         const c = str[i];
         if (c == '\n') {
             let new_line = document.createElement("div");
             terminal.insertBefore(new_line, line.nextSibling);
             cursorx = 0;
-            return write_to_line(new_line, str.substr(i+1));
+            write_to_line(new_line, str.substr(i+1));
+            return;
         }
         if (c == '\b') {
             if (cursorx > 0) {
