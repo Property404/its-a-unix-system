@@ -317,7 +317,7 @@ async fn run_script(process: &mut Process, source: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn shell(process: &mut Process, args: Vec<String>) -> Result<()> {
+pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
     let mut stdout = process.stdout.clone();
     let mut stdin = process.stdin.clone();
 
