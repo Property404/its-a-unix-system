@@ -51,7 +51,7 @@ pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
     let mut loops = 0;
     loop {
         let Some(fortune) = fortunes.choose(&mut rand::thread_rng()) else {
-            bail!("fortune: Could not select a fortune");
+            bail!("Could not select a fortune");
         };
 
         // Try to not give a fortune already given.

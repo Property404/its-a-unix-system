@@ -190,7 +190,6 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                     }
                 } else if crate::programs::get_program(process, args)
                     .await?
-                    .transpose()?
                     .is_none()
                 {
                     bail!("Command not found: {command}");

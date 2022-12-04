@@ -1,5 +1,6 @@
 use crate::process::Process;
 use anyhow::{anyhow, bail, Result};
+use std::{io::Write, process::ExitCode};
 mod common;
 
 pub use sh::sh as shell;
@@ -49,20 +50,32 @@ macro_rules! implement {
         $(
             mod $cmd;
         )*
-        pub async fn get_program(process: &mut Process, args: Vec<String>) -> Result<Option<Result<()>>> {
+        pub async fn get_program(process: &mut Process, args: Vec<String>) -> Result<Option<ExitCode>> {
             if args.is_empty() {
                 bail!("At least one argument is required to execute a program");
             }
             // could be ref
-            let command = &args[0];
-            $(
+            let command = args[0].clone();
+            let result = $(
                 if command == stringify!($cmd) {
-                    Ok(Some($cmd::$cmd(process, args).await))
+                    Some($cmd::$cmd(process, args).await)
                 } else
             )*
             {
-                exec_external_program(process, args).await
-            }
+                exec_external_program(process, args).await?
+            };
+
+            Ok(match result {
+                None => None,
+                Some(Ok(())) => Some(ExitCode::SUCCESS),
+                Some(Err(e)) => {
+                    process.stderr.write_all(command.as_bytes())?;
+                    process.stderr.write_all(b": ")?;
+                    process.stderr.write_all(e.to_string().as_bytes())?;
+                    process.stderr.write_all(b"\n")?;
+                    Some(ExitCode::FAILURE)
+                }
+            })
         }
     }
 }

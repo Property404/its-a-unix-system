@@ -23,7 +23,7 @@ pub async fn rm(process: &mut Process, args: Vec<String>) -> Result<()> {
         let path = process.get_path(file)?;
 
         if !options.recursive && path.is_dir()? {
-            bail!("rm: cannot operate recursively");
+            bail!("cannot operate recursively");
         }
 
         let result = path.remove_file();

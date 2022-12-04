@@ -20,10 +20,10 @@ pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
     let path = {
         let dir = process.get_path(options.target.unwrap_or_else(|| ".".into()))?;
         if !dir.exists()? {
-            bail!("ls: no such file or directory: {}", dir.as_str());
+            bail!("No such file or directory: {}", dir.as_str());
         }
         if !dir.is_dir()? {
-            bail!("ls: not a directory: {}", dir.as_str());
+            bail!("Not a directory: {}", dir.as_str());
         }
         dir
     };

@@ -15,7 +15,7 @@ pub async fn cp(process: &mut Process, args: Vec<String>) -> Result<()> {
     let options = Options::try_parse_from(args.into_iter())?;
     let src = process.get_path(&options.src)?;
     if !src.exists()? {
-        bail!("cp: src does not exist");
+        bail!("src does not exist");
     }
 
     let mut dest = process.get_path(&options.dest)?;

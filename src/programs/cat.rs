@@ -28,10 +28,10 @@ pub async fn cat(process: &mut Process, args: Vec<String>) -> Result<()> {
     for arg in options.files.into_iter() {
         let path = process.get_path(arg)?;
         if !path.exists()? {
-            bail!("cat: No such file {}", path.as_str());
+            bail!("No such file {}", path.as_str());
         }
         if !path.is_file()? {
-            bail!("cat: {} is not a file", path.as_str());
+            bail!("{} is not a file", path.as_str());
         }
         let mut file = path.open_file()?;
         contents.clear();
