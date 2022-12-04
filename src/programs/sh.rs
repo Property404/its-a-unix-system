@@ -189,7 +189,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                         }
                     }
                 } else if crate::programs::get_program(process, args)
-                    .await
+                    .await?
                     .transpose()?
                     .is_none()
                 {
