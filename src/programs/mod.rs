@@ -23,13 +23,7 @@ async fn exec_external_program(
 
     for path in paths {
         let path = path?;
-        for entity in path.walk_dir()? {
-            let entity = entity?;
-            // Don't delve into children.
-            if entity.parent().as_ref() != Some(&path) {
-                break;
-            }
-
+        for entity in path.read_dir()? {
             if entity.is_file()? && entity.filename() == command {
                 args.insert(1, entity.as_str().into());
                 run_command = true;

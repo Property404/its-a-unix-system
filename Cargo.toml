@@ -30,7 +30,7 @@ regex = "1.7.0"
 # TODO: switch to upstream if changes are merged
 [dependencies.vfs]
 git = "https://github.com/property404/rust-vfs"
-branch = "Property404/open-as-send"
+branch = "Property404/point-1"
 
 [build-dependencies]
 anyhow = "1.0.66"

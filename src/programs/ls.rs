@@ -36,13 +36,7 @@ pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
         picker.write(&mut process.stdout, ".\n..\n")?;
     }
 
-    for entity in path.walk_dir()? {
-        let entity = entity?;
-        // Don't delve into children.
-        if entity.parent().as_ref() != Some(&path) {
-            break;
-        }
-
+    for entity in path.read_dir()? {
         if entity.is_dir()? {
             picker.set_color(DIR_COLOR);
         } else {
