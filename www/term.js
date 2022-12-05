@@ -125,6 +125,7 @@ function js_term_write(str) {
         } else if (result = match_escape(c)) {
             if (result.type === ESCAPE_ENUM.COLOR)  {
                 let fg = result.fg;
+                style += " ";
                 if (fg === "30") {
                     style += "ct-black";
                 } else if (fg === "31") {
@@ -142,7 +143,6 @@ function js_term_write(str) {
                 } else if (fg === "0") {
                     style = "ct-normal";
                 }
-                style += " ";
             } else if (result.type === ESCAPE_ENUM.CURSOR_RELATIVE) {
                 if (result.direction === DIRECTION.LEFT) {
                     if (cursorx > 0) {
