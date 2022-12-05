@@ -173,6 +173,9 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
     async move {
         match root {
             Token::Command(args) => {
+                if args.is_empty() {
+                    bail!("Syntax error: Command cannot have empty arguments");
+                }
                 let command = args[0].clone();
                 if command == "cd" {
                     if args.len() > 1 {
