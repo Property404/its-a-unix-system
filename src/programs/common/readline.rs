@@ -232,6 +232,9 @@ impl<T: History> Readline<T> {
                     buffer.remove(cursor);
                     move_cursor_left(stdout, 1).await?;
                 }
+            // Ignore unknown commands
+            } else if (c as u8) < 0x20 {
+                // Do nothing
             } else {
                 buffer.insert(cursor, c);
                 cursor += 1;
