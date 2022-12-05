@@ -3,6 +3,7 @@ use crate::{
     programs::common::readline::{FileBasedHistory, Readline},
     streams,
 };
+use vfs::VfsPath;
 use anyhow::{anyhow, bail, Error, Result};
 use futures::{
     channel::oneshot,
@@ -337,8 +338,27 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
     let readline_history = FileBasedHistory::new(process.get_path(HISTORY_FILE)?);
     let mut readline = Readline::new(String::from("$ "), readline_history);
 
+    let bin_paths: Result<Vec<VfsPath>> = process.env.get("PATH")
+        .ok_or_else(||anyhow!("Could not get PATH variable"))?
+        .split(':')
+        .map(|path| process.get_path(path))
+        .collect();
+    let bin_paths = bin_paths?;
+
     loop {
-        let line = readline.get_line(&mut stdin, &mut stdout).await?;
+        let line = readline.get_line(&mut stdin, &mut stdout, Some(|word|{
+            let mut suggestions = Vec::new();
+
+            for path in bin_paths.clone() {
+                for command in path.read_dir()? {
+                    if command.is_file()? && command.filename().starts_with(&word) {
+                        suggestions.push(command.filename());
+                    }
+                }
+            }
+
+            Ok(suggestions)
+        })).await?;
         if line.trim().is_empty() {
             continue;
         }

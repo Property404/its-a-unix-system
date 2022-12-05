@@ -73,14 +73,18 @@ impl<T: History> Readline<T> {
         Self { prompt, history }
     }
     /// Get next line.
-    pub async fn get_line(
+    pub async fn get_line<F>(
         &mut self,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
-    ) -> Result<String> {
+        completer: Option<F>,
+    ) -> Result<String>
+    where
+        F: Fn(String) -> Result<Vec<String>>,
+    {
         stdin.set_mode(InputMode::Char).await?;
 
-        let result = self.get_line_inner(stdin, stdout).await;
+        let result = self.get_line_inner(stdin, stdout, completer).await;
 
         stdin.set_mode(InputMode::Line).await?;
 
@@ -91,11 +95,15 @@ impl<T: History> Readline<T> {
         result
     }
 
-    async fn get_line_inner(
+    async fn get_line_inner<F>(
         &self,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
-    ) -> Result<String> {
+        completer: Option<F>,
+    ) -> Result<String>
+    where
+        F: Fn(String) -> Result<Vec<String>>,
+    {
         let mut cursor = 0;
         let mut buffers = self.history.get_records()?;
         buffers.push(String::new());
@@ -178,8 +186,36 @@ impl<T: History> Readline<T> {
                     move_cursor_right(stdout, 1).await?;
                     cursor += 1;
                 }
+            // Tab complettions
+            } else if c == '\t' {
+                let Some(ref completer) = completer else {continue;};
+                if buffer.is_empty()
+                    || cursor == 0
+                    || buffer.chars().next_back().unwrap().is_whitespace()
+                {
+                    continue;
+                }
+
+                let start = buffer[0..cursor].rfind(' ').map(|x| x + 1).unwrap_or(0);
+                let word = &buffer[start..cursor];
+                let mut suggestions = completer(word.into())?;
+
+                if suggestions.len() != 1 {
+                    continue;
+                }
+
+                let suggestion = suggestions.pop().unwrap();
+                let new_cursor = cursor - word.len() + suggestion.len();
+                *buffer = format!("{}{}{}", &buffer[0..start], suggestion, &buffer[cursor..]);
+                if cursor >= new_cursor {
+                    move_cursor_left(stdout, cursor - new_cursor).await?;
+                } else {
+                    move_cursor_right(stdout, new_cursor - cursor).await?;
+                }
+                cursor = new_cursor;
+
             // Newline (\n or ^J)
-            } else if c == '\x0A' {
+            } else if c == '\n' {
                 // An interesting bug appears without this next line.
                 // The character behind the cursor will be deleted!
                 // The bug probably lies in term.js
