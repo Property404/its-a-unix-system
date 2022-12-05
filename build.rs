@@ -2,7 +2,7 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 use std::{
     env,
-    fs::File,
+    fs::{self, File},
     io::{Read, Write},
     process::Command,
 };
@@ -18,6 +18,33 @@ fn format_file(path: &str) -> Result<()> {
     } else {
         Err(anyhow!("Rustfmt failed"))
     }
+}
+
+fn generate_bin_directory() -> Result<()> {
+    env::set_current_dir("src/programs")?;
+
+    // Get list of all programs.
+    let mut bins: Vec<String> = Vec::new();
+    for entry in fs::read_dir("./")? {
+        let path = entry?.path().display().to_string();
+        let path = path.replace("./", "");
+        if path.starts_with('.') || path == "mod.rs" || path == "common" {
+            continue;
+        }
+        bins.push(path.replace(".rs", ""));
+    }
+
+    env::set_current_dir("../../rootfs/bin/")?;
+
+    // Write files to bin directory
+    for bin in bins {
+        println!("{bin}");
+        let mut file = File::create(&bin).unwrap();
+        file.write_all(b"echo 'This is an internal command.'\n")?;
+    }
+
+    env::set_current_dir("../..")?;
+    Ok(())
 }
 
 fn generate_rootfs_rs() -> Result<()> {
@@ -75,6 +102,8 @@ fn main() -> Result<()> {
     // Tell cargo to invalidate the built crate whenever the wrapper changes
     println!("cargo:rerun-if-changed=rootfs");
 
+    generate_bin_directory()?;
     generate_rootfs_rs()?;
+
     format_file(ROOTFS_RS_PATH)
 }

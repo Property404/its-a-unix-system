@@ -351,8 +351,10 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
 
             for path in bin_paths.clone() {
                 for command in path.read_dir()? {
-                    if command.is_file()? && command.filename().starts_with(&word) {
-                        suggestions.push(command.filename());
+                    let mut filename = command.filename();
+                    if command.is_file()? && filename.starts_with(&word) {
+                        filename.push(' ');
+                        suggestions.push(filename);
                     }
                 }
             }

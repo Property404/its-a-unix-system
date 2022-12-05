@@ -11,7 +11,7 @@ use futures::try_join;
 use process::Process;
 use wasm_bindgen::prelude::*;
 
-const DEFAULT_SEARCH_PATH: &str = "bin";
+const DEFAULT_SEARCH_PATHS: [&str; 2] = ["bin", "usr/bin"];
 
 async fn run() -> Result<()> {
     utils::set_panic_hook();
@@ -27,7 +27,9 @@ async fn run() -> Result<()> {
         signal_registrar,
         cwd: rootfs,
     };
-    shell.env.insert("PATH".into(), DEFAULT_SEARCH_PATH.into());
+    shell
+        .env
+        .insert("PATH".into(), DEFAULT_SEARCH_PATHS.join(":"));
 
     try_join!(backend.run(), async {
         programs::shell(&mut shell, Default::default()).await?;
