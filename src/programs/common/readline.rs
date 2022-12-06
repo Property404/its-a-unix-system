@@ -80,7 +80,7 @@ impl<T: History> Readline<T> {
         completer: Option<F>,
     ) -> Result<String>
     where
-        F: Fn(String) -> Result<Vec<String>>,
+        F: Fn(String, usize) -> Result<Vec<String>>,
     {
         stdin.set_mode(InputMode::Char).await?;
 
@@ -102,7 +102,7 @@ impl<T: History> Readline<T> {
         completer: Option<F>,
     ) -> Result<String>
     where
-        F: Fn(String) -> Result<Vec<String>>,
+        F: Fn(String, usize) -> Result<Vec<String>>,
     {
         let mut cursor = 0;
         let mut buffers = self.history.get_records()?;
@@ -197,8 +197,9 @@ impl<T: History> Readline<T> {
                 }
 
                 let start = buffer[0..cursor].rfind(' ').map(|x| x + 1).unwrap_or(0);
-                let word = &buffer[start..cursor];
-                let mut suggestions = completer(word.into())?;
+                let section = &buffer[0..cursor];
+                let word = &section[start..];
+                let mut suggestions = completer(section.into(), start)?;
 
                 if suggestions.len() != 1 {
                     continue;
