@@ -186,7 +186,7 @@ impl<T: History> Readline<T> {
                     move_cursor_right(stdout, 1).await?;
                     cursor += 1;
                 }
-            // Tab complettions
+            // Tab completions
             } else if c == '\t' {
                 let Some(ref completer) = completer else {continue;};
                 if buffer.is_empty()
@@ -201,19 +201,28 @@ impl<T: History> Readline<T> {
                 let word = &section[start..];
                 let mut suggestions = completer(section.into(), start)?;
 
-                if suggestions.len() != 1 {
+                if suggestions.is_empty() {
                     continue;
-                }
-
-                let suggestion = suggestions.pop().unwrap();
-                let new_cursor = cursor - word.len() + suggestion.len();
-                *buffer = format!("{}{}{}", &buffer[0..start], suggestion, &buffer[cursor..]);
-                if cursor >= new_cursor {
-                    move_cursor_left(stdout, cursor - new_cursor).await?;
+                } else if suggestions.len() == 1 {
+                    let suggestion = suggestions.pop().unwrap();
+                    let new_cursor = cursor - word.len() + suggestion.len();
+                    *buffer = format!("{}{}{}", &buffer[0..start], suggestion, &buffer[cursor..]);
+                    if cursor >= new_cursor {
+                        move_cursor_left(stdout, cursor - new_cursor).await?;
+                    } else {
+                        move_cursor_right(stdout, new_cursor - cursor).await?;
+                    }
+                    cursor = new_cursor;
                 } else {
-                    move_cursor_right(stdout, new_cursor - cursor).await?;
+                    stdout.write_all(b"\n").await?;
+                    for suggestion in suggestions {
+                        stdout.write_all(suggestion.as_str().as_bytes()).await?;
+                        stdout.write_all(b" ").await?;
+                    }
+                    stdout.write_all(b"\n").await?;
+                    stdout.write_all(self.prompt.as_bytes()).await?;
+                    move_cursor_right(stdout, cursor).await?;
                 }
-                cursor = new_cursor;
 
             // Newline (\n or ^J)
             } else if c == '\n' {
