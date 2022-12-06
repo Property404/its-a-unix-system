@@ -346,7 +346,7 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
     let bin_paths = bin_paths?;
 
     loop {
-        let line = readline.get_line(&mut stdin, &mut stdout, Some(|section: String, start: usize|{
+        let line = match readline.get_line(&mut stdin, &mut stdout, Some(|section: String, start: usize|{
             let word = &section[start..];
             let words: Vec<&str> = section.split_whitespace().collect();
             let mut suggestions = Vec::new();
@@ -378,7 +378,15 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
             }
 
             Ok(suggestions)
-        })).await?;
+        })).await {
+            Ok(line) => line,
+            Err(e) => {
+                process.stderr.write_all(b"\nreadline: ").await?;
+                process.stderr.write_all(e.to_string().as_bytes()).await?;
+                process.stderr.write_all(b"\n").await?;
+                continue;
+            }
+        };
         if line.trim().is_empty() {
             continue;
         }
