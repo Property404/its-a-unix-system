@@ -36,7 +36,9 @@ jobs:
         run: cargo build --verbose
 
       - name: Lint
-        run: cargo fmt -- --check
+        run: |
+          cargo fmt -- $(find src -name '*.rs') --check && \
+          cargo fmt -- --check
 
       - name: Build documentation
         run: cargo doc --verbose
