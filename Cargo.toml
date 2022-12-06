@@ -31,7 +31,7 @@ web-sys = { version = "0.3.60", features = ["Document", "Window", "KeyboardEvent
 # TODO: switch to upstream if changes are merged
 [dependencies.vfs]
 git = "https://github.com/property404/rust-vfs"
-branch = "Property404/point-1"
+branch = "Property404/point-2"
 
 [build-dependencies]
 anyhow = "1.0.66"

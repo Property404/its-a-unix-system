@@ -26,7 +26,7 @@ impl Process {
             path = &path[1..];
             root = true;
         }
-        if path.ends_with('/') {
+        while path.ends_with('/') {
             path = &path[0..path.len() - 1]
         }
 
