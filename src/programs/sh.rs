@@ -372,7 +372,13 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
 
                 for dir in path.read_dir()? {
                     if dir.filename().starts_with(file) {
-                        suggestions.push(dir.as_str().to_string());
+                        let mut suggestion = dir.as_str().to_string();
+                        if dir.is_file()? {
+                            suggestion.push(' ');
+                        } else {
+                            suggestion.push('/');
+                        }
+                        suggestions.push(suggestion);
                     }
                 }
             }
