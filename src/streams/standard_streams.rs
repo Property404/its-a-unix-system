@@ -5,6 +5,7 @@ use crate::{
     utils, AnsiCode,
 };
 use anyhow::{anyhow, Result};
+use ascii::AsciiChar;
 use futures::{
     channel::{
         mpsc::{self, UnboundedReceiver, UnboundedSender},
@@ -134,6 +135,12 @@ impl KeyboardTerminalReader {
                         ctrl_char.push((c - b'@') as char);
                         echo(mode, &ctrl_char, &mut cbuffer);
                     }
+                // Send metakey characters.
+                } else if e.alt_key() {
+                    // Allow 'R' and 'I' for refresh and inspector
+                    e.prevent_default();
+                    let ctrl_char = format!("{}{}", AsciiChar::ESC.as_char(), key);
+                    echo(mode, &ctrl_char, &mut cbuffer);
                 } else {
                     echo(mode, &key, &mut cbuffer);
                     if "'/?".contains(&key) {

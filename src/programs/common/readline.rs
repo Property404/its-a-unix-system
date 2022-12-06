@@ -3,6 +3,7 @@ use crate::{
     AnsiCode,
 };
 use anyhow::Result;
+use ascii::AsciiChar;
 use futures::io::AsyncWriteExt;
 use std::io::Read;
 use vfs::VfsPath;
@@ -124,42 +125,71 @@ impl<T: History> Readline<T> {
             stdout.flush().await?;
 
             let c = stdin.get_char().await?;
-            if c == '\x1b' {
+            if c == AsciiChar::ESC {
                 // Throw away bracket
-                let _ = stdin.get_char().await?;
-
                 match stdin.get_char().await? {
-                    // Up/Down arrow - Move up/down in history
-                    mode @ ('A' | 'B') => {
-                        if mode == 'A' && buffer_index > 0 {
-                            buffer_index -= 1;
-                        } else if mode == 'B' && buffer_index < buffers.len() - 1 {
-                            buffer_index += 1
-                        } else {
+                    '[' => match stdin.get_char().await? {
+                        // Up/Down arrow - Move up/down in history
+                        mode @ ('A' | 'B') => {
+                            if mode == 'A' && buffer_index > 0 {
+                                buffer_index -= 1;
+                            } else if mode == 'B' && buffer_index < buffers.len() - 1 {
+                                buffer_index += 1
+                            } else {
+                                continue;
+                            }
+
+                            let len = buffers[buffer_index].len();
+                            if cursor >= len {
+                                move_cursor_left(stdout, cursor - len).await?;
+                            } else {
+                                move_cursor_right(stdout, len - cursor).await?;
+                            }
+                            cursor = len;
+                        }
+                        // Right arrow - move right
+                        'C' => {
+                            if cursor < buffer.len() {
+                                move_cursor_right(stdout, 1).await?;
+                                cursor += 1;
+                            }
+                        }
+                        // Left arrow - move left
+                        'D' => {
+                            if cursor > 0 {
+                                move_cursor_left(stdout, 1).await?;
+                                cursor -= 1;
+                            }
+                        }
+                        _ => {}
+                    },
+                    // Move left one word
+                    'b' => {
+                        if cursor == 0 {
                             continue;
                         }
+                        let buffer = buffer[0..cursor].trim_end();
+                        let new_pos = buffer.rfind(' ').map(|x| x + 1).unwrap_or(0);
 
-                        let len = buffers[buffer_index].len();
-                        if cursor >= len {
-                            move_cursor_left(stdout, cursor - len).await?;
-                        } else {
-                            move_cursor_right(stdout, len - cursor).await?;
-                        }
-                        cursor = len;
+                        move_cursor_left(stdout, cursor - new_pos).await?;
+                        cursor = new_pos;
                     }
-                    // Right arrow - move right
-                    'C' => {
-                        if cursor < buffer.len() {
-                            move_cursor_right(stdout, 1).await?;
-                            cursor += 1;
+                    // Move right one word
+                    'f' => {
+                        if cursor == buffer.len() {
+                            continue;
                         }
-                    }
-                    // Left arrow - move left
-                    'D' => {
-                        if cursor > 0 {
-                            move_cursor_left(stdout, 1).await?;
-                            cursor -= 1;
-                        }
+                        let mut start = cursor + 1;
+                        let section = &buffer[start..];
+                        let trimmed_section = section.trim_start();
+                        start += section.len() - trimmed_section.len();
+                        let new_pos = trimmed_section
+                            .find(' ')
+                            .map(|x| x + start)
+                            .unwrap_or(buffer.len());
+
+                        move_cursor_right(stdout, new_pos - cursor).await?;
+                        cursor = new_pos;
                     }
                     _ => {}
                 }
@@ -236,7 +266,7 @@ impl<T: History> Readline<T> {
                 // Todo: I think there's a way to move out of the vector instead of cloning.
                 return Ok(buffer.clone());
             // Backspace
-            } else if c == '\x08' {
+            } else if c == AsciiChar::BackSpace {
                 if cursor > 0 {
                     cursor -= 1;
                     buffer.remove(cursor);

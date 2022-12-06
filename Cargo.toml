@@ -15,17 +15,18 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 anyhow = "1.0.66"
+ascii = "1.1.0"
 clap = { version = "4.0.27", features = ["derive", "std", "help", "usage", "suggestions"], default-features = false }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 futures = "0.3.25"
 getrandom = { version = "0.2.8", features = ["js"] }
 js-sys = "0.3.60"
 rand = "0.8.5"
+regex = "1.7.0"
 textwrap = "0.16.0"
 wasm-bindgen = "0.2.83"
 wasm-bindgen-futures = { version = "0.4.33", features = ["futures-core", "futures-core-03-stream"] }
 web-sys = { version = "0.3.60", features = ["Document", "Window", "KeyboardEvent"] }
-regex = "1.7.0"
 
 # TODO: switch to upstream if changes are merged
 [dependencies.vfs]
