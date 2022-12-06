@@ -3,7 +3,6 @@ use crate::{
     programs::common::readline::{FileBasedHistory, Readline},
     streams,
 };
-use vfs::VfsPath;
 use anyhow::{anyhow, bail, Error, Result};
 use futures::{
     channel::oneshot,
@@ -13,6 +12,7 @@ use futures::{
     stream::{AbortHandle, Abortable},
     try_join,
 };
+use vfs::VfsPath;
 
 const HISTORY_FILE: &str = "/etc/.sh_history";
 
@@ -192,10 +192,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                             process.stderr.write_all(b": No such directory\n").await?;
                         }
                     }
-                } else if crate::programs::get_program(process, args)
-                    .await?
-                    .is_none()
-                {
+                } else if crate::programs::get_program(process, args).await?.is_none() {
                     bail!("Command not found: {command}");
                 }
                 Ok(())
@@ -338,53 +335,62 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
     let readline_history = FileBasedHistory::new(process.get_path(HISTORY_FILE)?);
     let mut readline = Readline::new(String::from("$ "), readline_history);
 
-    let bin_paths: Result<Vec<VfsPath>> = process.env.get("PATH")
-        .ok_or_else(||anyhow!("Could not get PATH variable"))?
+    let bin_paths: Result<Vec<VfsPath>> = process
+        .env
+        .get("PATH")
+        .ok_or_else(|| anyhow!("Could not get PATH variable"))?
         .split(':')
         .map(|path| process.get_path(path))
         .collect();
     let bin_paths = bin_paths?;
 
     loop {
-        let line = match readline.get_line(&mut stdin, &mut stdout, Some(|section: String, start: usize|{
-            let word = &section[start..];
-            let words: Vec<&str> = section.split_whitespace().collect();
-            let mut suggestions = Vec::new();
+        let line = match readline
+            .get_line(
+                &mut stdin,
+                &mut stdout,
+                Some(|section: String, start: usize| {
+                    let word = &section[start..];
+                    let words: Vec<&str> = section.split_whitespace().collect();
+                    let mut suggestions = Vec::new();
 
-            // Commands occur at start of line, or after pipes
-            if words.len() < 2 || words[words.len() - 2] == "|" {
-                for path in bin_paths.clone() {
-                    for command in path.read_dir()? {
-                        let mut filename = command.filename();
-                        if command.is_file()? && filename.starts_with(word) {
-                            filename.push(' ');
-                            suggestions.push(filename);
+                    // Commands occur at start of line, or after pipes
+                    if words.len() < 2 || words[words.len() - 2] == "|" {
+                        for path in bin_paths.clone() {
+                            for command in path.read_dir()? {
+                                let mut filename = command.filename();
+                                if command.is_file()? && filename.starts_with(word) {
+                                    filename.push(' ');
+                                    suggestions.push(filename);
+                                }
+                            }
                         }
-                    }
-                }
-            } else {
-                let (path, file) = if let Some(slash) = word.rfind('/') {
-                    (&word[0..slash],&word[slash+1..])
-                } else {
-                    ("", word)
-                };
-                let path = process.get_path(path)?;
-
-                for dir in path.read_dir()? {
-                    if dir.filename().starts_with(file) {
-                        let mut suggestion = dir.as_str().to_string();
-                        if dir.is_file()? {
-                            suggestion.push(' ');
+                    } else {
+                        let (path, file) = if let Some(slash) = word.rfind('/') {
+                            (&word[0..slash], &word[slash + 1..])
                         } else {
-                            suggestion.push('/');
-                        }
-                        suggestions.push(suggestion);
-                    }
-                }
-            }
+                            ("", word)
+                        };
+                        let path = process.get_path(path)?;
 
-            Ok(suggestions)
-        })).await {
+                        for dir in path.read_dir()? {
+                            if dir.filename().starts_with(file) {
+                                let mut suggestion = dir.as_str().to_string();
+                                if dir.is_file()? {
+                                    suggestion.push(' ');
+                                } else {
+                                    suggestion.push('/');
+                                }
+                                suggestions.push(suggestion);
+                            }
+                        }
+                    }
+
+                    Ok(suggestions)
+                }),
+            )
+            .await
+        {
             Ok(line) => line,
             Err(e) => {
                 process.stderr.write_all(b"\nreadline: ").await?;
