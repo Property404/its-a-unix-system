@@ -155,6 +155,8 @@ function js_term_write(str) {
                 } else {
                     console.error("UNIMPLEMENTED ANSI CODE DIRECTION", result.direction);
                 }
+            } else if (result.type == ESCAPE_ENUM.CLEAR) {
+                js_term_clear();
             } else if (result.type == ESCAPE_ENUM.CLEAR_LINE) {
                 if (line_to_clear = terminal.lastChild) {
                     line_to_clear.replaceChildren()
