@@ -260,8 +260,8 @@ impl<T: History> Readline<T> {
                     move_cursor_right(stdout, cursor).await?;
                 }
 
-            // Newline (\n or ^J)
-            } else if c == '\n' {
+            // Newline(^L) or carriage return (^M)
+            } else if c == '\n' || c == '\r' {
                 // An interesting bug appears without this next line.
                 // The character behind the cursor will be deleted!
                 // The bug probably lies in term.js
