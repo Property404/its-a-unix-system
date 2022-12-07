@@ -216,6 +216,11 @@ impl<T: History> Readline<T> {
                     move_cursor_right(stdout, 1).await?;
                     cursor += 1;
                 }
+            // ^L - clear screen
+            } else if c == ControlChar::L {
+                stdout.write_all(&AnsiCode::Clear.to_bytes()).await?;
+                stdout.write_all(self.prompt.as_bytes()).await?;
+                move_cursor_right(stdout, cursor).await?;
             // Tab completions
             } else if c == '\t' {
                 let Some(ref completer) = completer else {continue;};
@@ -244,6 +249,7 @@ impl<T: History> Readline<T> {
                     }
                     cursor = new_cursor;
                 } else {
+                    // Display suggestions
                     stdout.write_all(b"\n").await?;
                     for suggestion in suggestions {
                         stdout.write_all(suggestion.as_str().as_bytes()).await?;
