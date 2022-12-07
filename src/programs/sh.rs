@@ -351,7 +351,7 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
             let mut suggestions = Vec::new();
 
             // Commands occur at start of line, or after pipes
-            if (words.is_empty() || !section.ends_with(" "))
+            if (words.is_empty() || !section.ends_with(' '))
                 && (words.len() < 2 || words[words.len() - 2] == "|")
             {
                 for path in bin_paths.clone() {
