@@ -174,7 +174,7 @@ impl KeyboardTerminalReader {
                 }
 
                 if mode == InputMode::Char {
-                    cbuffer.push(b'\x08')
+                    cbuffer.push(AsciiChar::BackSpace.as_byte())
                 }
             }
 

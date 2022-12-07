@@ -1,6 +1,6 @@
 use crate::{
     streams::{InputMode, InputStream, OutputStream},
-    AnsiCode,
+    AnsiCode, ControlChar,
 };
 use anyhow::Result;
 use ascii::AsciiChar;
@@ -196,22 +196,22 @@ impl<T: History> Readline<T> {
                 continue;
             }
 
-            // ^A
-            if c == '\x01' {
+            // ^A - move cusor to beginning of line
+            if c == ControlChar::A {
                 move_cursor_left(stdout, cursor).await?;
                 cursor = 0;
-            // ^B
-            } else if c == '\x02' {
+            // ^B - move cursor back one char
+            } else if c == ControlChar::B {
                 if cursor > 0 {
                     move_cursor_left(stdout, 1).await?;
                 }
                 cursor = cursor.saturating_sub(1);
-            // ^E
-            } else if c == '\x05' {
+            // ^E - move cursor to end of line
+            } else if c == ControlChar::E {
                 move_cursor_right(stdout, buffer.len() - cursor).await?;
                 cursor = buffer.len();
-            // ^F
-            } else if c == '\x06' {
+            // ^F - move cursor forward one char
+            } else if c == ControlChar::F {
                 if cursor < buffer.len() {
                     move_cursor_right(stdout, 1).await?;
                     cursor += 1;

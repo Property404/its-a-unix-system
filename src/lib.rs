@@ -5,7 +5,7 @@ mod process;
 mod programs;
 mod streams;
 mod utils;
-use ansi_codes::AnsiCode;
+use ansi_codes::{AnsiCode, ControlChar};
 use anyhow::Result;
 use futures::try_join;
 use process::Process;

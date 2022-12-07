@@ -35,3 +35,47 @@ impl ToString for AnsiCode {
         }
     }
 }
+
+/// Represents a control character.
+#[repr(u8)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
+pub enum ControlChar {
+    A = 1,
+    B,
+    C,
+    D,
+    E,
+    F,
+    G,
+    H,
+    I,
+    J,
+    K,
+    L,
+    M,
+    N,
+    O,
+    P,
+    Q,
+    R,
+    S,
+    T,
+    U,
+    V,
+    W,
+    X,
+    Y,
+    Z,
+}
+
+impl PartialEq<char> for ControlChar {
+    fn eq(&self, c: &char) -> bool {
+        (*self as u8) == (*c as u8)
+    }
+}
+impl PartialEq<ControlChar> for char {
+    fn eq(&self, c: &ControlChar) -> bool {
+        (*self as u8) == (*c as u8)
+    }
+}
