@@ -345,50 +345,48 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
     let bin_paths = bin_paths?;
 
     loop {
-        let line = match readline
-            .get_line(
-                &mut stdin,
-                &mut stdout,
-                Some(|section: String, start: usize| {
-                    let word = &section[start..];
-                    let words: Vec<&str> = section.split_whitespace().collect();
-                    let mut suggestions = Vec::new();
+        let tab_completer = |section: String, start: usize| {
+            let word = &section[start..];
+            let words: Vec<&str> = section.split_whitespace().collect();
+            let mut suggestions = Vec::new();
 
-                    // Commands occur at start of line, or after pipes
-                    if words.len() < 2 || words[words.len() - 2] == "|" {
-                        for path in bin_paths.clone() {
-                            for command in path.read_dir()? {
-                                let mut filename = command.filename();
-                                if command.is_file()? && filename.starts_with(word) {
-                                    filename.push(' ');
-                                    suggestions.push(filename);
-                                }
-                            }
-                        }
-                    } else {
-                        let (path, file) = if let Some(slash) = word.rfind('/') {
-                            (&word[0..slash], &word[slash + 1..])
-                        } else {
-                            ("", word)
-                        };
-                        let path = process.get_path(path)?;
-
-                        for dir in path.read_dir()? {
-                            if dir.filename().starts_with(file) {
-                                let mut suggestion = dir.as_str().to_string();
-                                if dir.is_file()? {
-                                    suggestion.push(' ');
-                                } else {
-                                    suggestion.push('/');
-                                }
-                                suggestions.push(suggestion);
-                            }
+            // Commands occur at start of line, or after pipes
+            if words.len() < 2 || words[words.len() - 2] == "|" {
+                for path in bin_paths.clone() {
+                    for command in path.read_dir()? {
+                        let mut filename = command.filename();
+                        if command.is_file()? && filename.starts_with(word) {
+                            filename.push(' ');
+                            suggestions.push(filename);
                         }
                     }
+                }
+            } else {
+                let (path, file) = if let Some(slash) = word.rfind('/') {
+                    (&word[0..slash], &word[slash + 1..])
+                } else {
+                    ("", word)
+                };
+                let path = process.get_path(path)?;
 
-                    Ok(suggestions)
-                }),
-            )
+                for dir in path.read_dir()? {
+                    if dir.filename().starts_with(file) {
+                        let mut suggestion = dir.as_str().to_string();
+                        if dir.is_file()? {
+                            suggestion.push(' ');
+                        } else {
+                            suggestion.push('/');
+                        }
+                        suggestions.push(suggestion);
+                    }
+                }
+            }
+
+            Ok(suggestions)
+        };
+
+        let line = match readline
+            .get_line(&mut stdin, &mut stdout, Some(tab_completer))
             .await
         {
             Ok(line) => line,
