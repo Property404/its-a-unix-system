@@ -106,6 +106,7 @@ impl<T: History> Readline<T> {
         F: Fn(String, usize) -> Result<Vec<String>>,
     {
         let mut cursor = 0;
+        let mut skip_refresh = false;
         let mut buffers = self.history.get_records()?;
         buffers.push(String::new());
         let mut buffer_index = buffers.len() - 1;
@@ -116,12 +117,15 @@ impl<T: History> Readline<T> {
                 .get_mut(buffer_index)
                 .expect("History out of bounds");
 
-            move_cursor_left(stdout, cursor).await?;
-            stdout
-                .write_all(&AnsiCode::ClearToEndOfLine.to_bytes())
-                .await?;
-            stdout.write_all(buffer.as_bytes()).await?;
-            move_cursor_left(stdout, buffer.len() - cursor).await?;
+            if !skip_refresh {
+                move_cursor_left(stdout, cursor).await?;
+                stdout
+                    .write_all(&AnsiCode::ClearToEndOfLine.to_bytes())
+                    .await?;
+                stdout.write_all(buffer.as_bytes()).await?;
+                move_cursor_left(stdout, buffer.len() - cursor).await?;
+            }
+            skip_refresh = false;
             stdout.flush().await?;
 
             let c = stdin.get_char().await?;
@@ -231,6 +235,7 @@ impl<T: History> Readline<T> {
                 let mut suggestions = completer(section.into(), start)?;
 
                 if suggestions.is_empty() {
+                    skip_refresh = true;
                     continue;
                 } else if suggestions.len() == 1 {
                     let suggestion = suggestions.pop().unwrap();
@@ -278,7 +283,13 @@ impl<T: History> Readline<T> {
             } else {
                 buffer.insert(cursor, c);
                 cursor += 1;
-                move_cursor_right(stdout, 1).await?;
+                if cursor == buffer.len() {
+                    // todo - do we lose emoji support here?
+                    stdout.write_all(&[c as u8]).await?;
+                    skip_refresh = true;
+                } else {
+                    move_cursor_right(stdout, 1).await?;
+                }
             }
         }
     }
