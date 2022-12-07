@@ -10,9 +10,9 @@ const ESCAPE_ENUM = {
     CLEAR_TO_END: "CLEAR_TO_END",
 };
 const DIRECTION = {
-    UP:"A",
-    DOWN:"B",
-    RIGHT:"C",
+    UP: "A",
+    DOWN: "B",
+    RIGHT: "C",
     LEFT: "D",
     LEFT_ABS: "G",
 };
@@ -51,7 +51,7 @@ function get_pos_in_line(line, x) {
     }
 
     padding = document.createElement("span");
-    padding.textContent = "*".repeat(x-position);
+    padding.textContent = "*".repeat(x - position);
     line.appendChild(padding);
     return padding;
 }
@@ -123,7 +123,7 @@ function js_term_write(str) {
                 buffer += c;
             }
         } else if (result = match_escape(c)) {
-            if (result.type === ESCAPE_ENUM.COLOR)  {
+            if (result.type === ESCAPE_ENUM.COLOR) {
                 let fg = result.fg;
                 style += " ";
                 if (fg === "30") {
@@ -191,7 +191,7 @@ function line_from_last(n) {
         let sibling = latest_line;
         while (n++ < 0) {
             sibling = sibling.previousSibiling;
-            if (sibling  == null) {
+            if (sibling == null) {
                 break;
             }
         }
@@ -233,7 +233,7 @@ function write_to_line(line, str) {
             let new_line = document.createElement("div");
             terminal.insertBefore(new_line, line.nextSibling);
             cursorx = 0;
-            write_to_line(new_line, str.substr(i+1));
+            write_to_line(new_line, str.substr(i + 1));
             return;
         }
         if (c == '\b') {
@@ -244,7 +244,7 @@ function write_to_line(line, str) {
         }
         focus.textContent += c;
         cursorx += 1
-        while(adj_span?.textContent === "") {
+        while (adj_span?.textContent === "") {
             let temp = adj_span;
             adj_span = adj_span.nextSibling;
             if (adj_span?.id === cursor.id) {

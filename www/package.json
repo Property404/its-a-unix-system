@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "webpack --config webpack.config.js",
+    "format": "js-beautify --end-with-newline *.js",
     "start": "webpack-dev-server"
   },
   "repository": {
@@ -27,11 +28,12 @@
   },
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "devDependencies": {
+    "copy-webpack-plugin": "^5.0.0",
     "faux-unix-system": "file:../pkg",
     "hello-wasm-pack": "^0.1.0",
+    "js-beautify": "^1.14.7",
     "webpack": "^4.29.3",
     "webpack-cli": "^3.1.0",
-    "webpack-dev-server": "^3.1.5",
-    "copy-webpack-plugin": "^5.0.0"
+    "webpack-dev-server": "^3.1.5"
   }
 }
