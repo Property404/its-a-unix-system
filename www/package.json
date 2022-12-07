@@ -9,6 +9,7 @@
   "scripts": {
     "build": "webpack --config webpack.config.js",
     "format": "js-beautify --end-with-newline *.js",
+    "lint": "eslint *.js",
     "start": "webpack-dev-server"
   },
   "repository": {
@@ -29,6 +30,7 @@
   "homepage": "https://github.com/rustwasm/create-wasm-app#readme",
   "devDependencies": {
     "copy-webpack-plugin": "^5.0.0",
+    "eslint": "^8.29.0",
     "faux-unix-system": "file:../pkg",
     "hello-wasm-pack": "^0.1.0",
     "js-beautify": "^1.14.7",

@@ -1,3 +1,5 @@
+"use strict";
+
 const terminal = document.getElementById("terminal")
 const hidey_hole = document.getElementById("hidey-hole");
 const cursor = document.getElementById("cursor");
@@ -24,10 +26,9 @@ let cursorx = 0;
 
 function get_pos_in_line(line, x) {
     let adj_span = null;
-    let hit = false;
     let position = 0;
 
-    for (child of line.children) {
+    for (const child of line.children) {
         if (child.id === cursor.id) {
             continue;
         }
@@ -35,7 +36,6 @@ function get_pos_in_line(line, x) {
         if (next_position >= x) {
             const pos = x - position;
             const content = child.textContent;
-            hit = true;
             // Split spans
             // Can be optimized, probably.
             child.textContent = content.substr(0, pos);
@@ -50,7 +50,7 @@ function get_pos_in_line(line, x) {
         position = next_position;
     }
 
-    padding = document.createElement("span");
+    const padding = document.createElement("span");
     padding.textContent = "*".repeat(x - position);
     line.appendChild(padding);
     return padding;
@@ -80,25 +80,25 @@ function match_escape(c) {
 
     let result = null;
     // https://gist.github.com/fnky/458719343aabd01cfb17a3a4f7296797
-    if (result = /\[([0-9]+)m/.exec(esc_sequence)) {
+    if ((result = /\[([0-9]+)m/.exec(esc_sequence))) {
         result = {
             type: ESCAPE_ENUM.COLOR,
             fg: result[1]
         }
-    } else if (result = /c/.exec(esc_sequence)) {
+    } else if ((result = /c/.exec(esc_sequence))) {
         result = {
             type: ESCAPE_ENUM.CLEAR,
         }
-    } else if (result = /\[([ABCDG])/.exec(esc_sequence)) {
+    } else if ((result = /\[([ABCDG])/.exec(esc_sequence))) {
         result = {
             type: ESCAPE_ENUM.CURSOR_RELATIVE,
             direction: result[1]
         }
-    } else if (result = /\[2K/.exec(esc_sequence)) {
+    } else if ((result = /\[2K/.exec(esc_sequence))) {
         result = {
             type: ESCAPE_ENUM.CLEAR_LINE
         }
-    } else if (result = /\[0K/.exec(esc_sequence)) {
+    } else if ((result = /\[0K/.exec(esc_sequence))) {
         result = {
             type: ESCAPE_ENUM.CLEAR_TO_END
         }
@@ -113,7 +113,8 @@ function match_escape(c) {
 
 function js_term_write(str) {
     let buffer = "";
-    for (c of str) {
+    let result;
+    for (const c of str) {
         if (esc_sequence === null) {
             if (c === "\u001b") {
                 write_with_style(buffer);
@@ -122,7 +123,7 @@ function js_term_write(str) {
             } else {
                 buffer += c;
             }
-        } else if (result = match_escape(c)) {
+        } else if ((result = match_escape(c))) {
             if (result.type === ESCAPE_ENUM.COLOR) {
                 let fg = result.fg;
                 style += " ";
@@ -158,15 +159,13 @@ function js_term_write(str) {
             } else if (result.type == ESCAPE_ENUM.CLEAR) {
                 js_term_clear();
             } else if (result.type == ESCAPE_ENUM.CLEAR_LINE) {
-                if (line_to_clear = terminal.lastChild) {
-                    line_to_clear.replaceChildren()
-                }
+                terminal.lastChild?.replaceChildren();
             } else if (result.type == ESCAPE_ENUM.CLEAR_TO_END) {
                 move_cursor_x(cursorx);
                 const line = cursor.parentElement;
                 let element = cursor.nextSibling;
                 while (element !== null) {
-                    temp = element;
+                    const temp = element;
                     element = element.nextSibling;
                     line.removeChild(temp);
                 }
@@ -215,14 +214,13 @@ function line_from_last(n) {
 
 function write_to_line(line, str) {
     let focus = null;
-    let position = 0;
 
     if (str === "") {
         return;
     }
 
     hidey_hole.appendChild(cursor);
-    const adj_span = get_pos_in_line(line, cursorx).nextSibling;
+    let adj_span = get_pos_in_line(line, cursorx).nextSibling;
     focus = document.createElement("span");
     focus.className = style;
     line.insertBefore(focus, adj_span);
