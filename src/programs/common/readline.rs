@@ -224,12 +224,6 @@ impl<T: History> Readline<T> {
             // Tab completions
             } else if c == '\t' {
                 let Some(ref completer) = completer else {continue;};
-                if buffer.is_empty()
-                    || cursor == 0
-                    || buffer.chars().next_back().unwrap().is_whitespace()
-                {
-                    continue;
-                }
 
                 let start = buffer[0..cursor].rfind(' ').map(|x| x + 1).unwrap_or(0);
                 let section = &buffer[0..cursor];
