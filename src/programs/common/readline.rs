@@ -220,11 +220,19 @@ impl<T: History> Readline<T> {
                     move_cursor_right(stdout, 1).await?;
                     cursor += 1;
                 }
+            // ^K - kill after cursor
+            } else if c == ControlChar::K {
+                *buffer = buffer[..cursor].into();
             // ^L - clear screen
             } else if c == ControlChar::L {
                 stdout.write_all(&AnsiCode::Clear.to_bytes()).await?;
                 stdout.write_all(self.prompt.as_bytes()).await?;
                 move_cursor_right(stdout, cursor).await?;
+            // ^U - kill until cursor
+            } else if c == ControlChar::U {
+                *buffer = buffer[cursor..].into();
+                move_cursor_left(stdout, cursor).await?;
+                cursor = 0;
             // Tab completions
             } else if c == '\t' {
                 let Some(ref completer) = completer else {continue;};
