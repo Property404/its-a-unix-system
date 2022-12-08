@@ -1,9 +1,9 @@
 mod ansi_codes;
-mod filesystem;
+pub mod filesystem;
 mod generated;
-mod process;
-mod programs;
-mod streams;
+pub mod process;
+pub mod programs;
+pub mod streams;
 mod utils;
 use ansi_codes::{AnsiCode, ControlChar};
 use anyhow::Result;
