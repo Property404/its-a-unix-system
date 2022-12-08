@@ -4,6 +4,7 @@ use crate::{
     streams,
 };
 use anyhow::{anyhow, bail, Error, Result};
+use clap::Parser;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
@@ -316,19 +317,35 @@ async fn run_script(process: &mut Process, source: &str) -> Result<()> {
     }
     Ok(())
 }
+/// Unix shell.
+#[derive(Parser)]
+struct Options {
+    /// A command to run.
+    #[arg(short, conflicts_with = "script")]
+    command: Option<String>,
+    /// A script to run.
+    script: Option<String>,
+}
 
 pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
+    let options = Options::try_parse_from(args.into_iter())?;
+
     let mut stdout = process.stdout.clone();
     let mut stdin = process.stdin.clone();
 
-    if args.len() > 1 {
+    if let Some(file_path) = options.script {
         let mut script = String::new();
         process
-            .get_path(&args[1])?
+            .get_path(&file_path)?
             .open_file()?
             .read_to_string(&mut script)?;
 
         run_script(process, &script).await?;
+        return Ok(());
+    }
+
+    if let Some(command) = options.command {
+        run_script(process, &command).await?;
         return Ok(());
     }
 
