@@ -45,15 +45,18 @@ function get_pos_in_line(line, x) {
                 adj_span.className = child.className;
                 line.insertBefore(adj_span, child.nextSibling);
             }
-            return child;
+            return child.nextSibling;
         }
         position = next_position;
     }
 
-    const padding = document.createElement("span");
-    padding.textContent = "*".repeat(x - position);
-    line.appendChild(padding);
-    return padding;
+    if (x != position) {
+        const padding = document.createElement("span");
+        padding.textContent = "*".repeat(x - position);
+        line.appendChild(padding);
+        return padding.nextSibling;
+    }
+    return null;
 }
 
 function move_cursor_x(x) {
@@ -66,7 +69,7 @@ function move_cursor_x(x) {
     const line = line_from_last(0);
     const span = get_pos_in_line(line, cursorx);
 
-    line.insertBefore(cursor, span.nextSibling);
+    line.insertBefore(cursor, span);
 }
 
 function match_escape(c) {
@@ -220,7 +223,7 @@ function write_to_line(line, str) {
     }
 
     hidey_hole.appendChild(cursor);
-    let adj_span = get_pos_in_line(line, cursorx).nextSibling;
+    let adj_span = get_pos_in_line(line, cursorx);
     focus = document.createElement("span");
     focus.className = style;
     line.insertBefore(focus, adj_span);
@@ -228,7 +231,7 @@ function write_to_line(line, str) {
     for (let i = 0; i < str.length; i++) {
         const c = str[i];
         if (c == '\n') {
-            let new_line = document.createElement("div");
+            const new_line = document.createElement("div");
             terminal.insertBefore(new_line, line.nextSibling);
             cursorx = 0;
             write_to_line(new_line, str.substr(i + 1));
