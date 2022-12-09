@@ -110,6 +110,16 @@ fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> R
         if c == '}' {
             if let Some(value) = process.env.get(&value) {
                 source.prepend(value.chars());
+            // Display all args (except the first)
+            } else if value == "@" {
+                let args: Vec<String> = process.args.iter().skip(1).cloned().collect();
+                let args = args.join(" ");
+                source.prepend(args.chars());
+            // Display an argument
+            } else if let Ok(value) = value.parse::<u8>() {
+                if let Some(value) = process.args.get(value as usize) {
+                    source.prepend(value.chars());
+                }
             }
             return Ok(());
         } else {
@@ -224,8 +234,15 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                             process.stderr.write_all(b": No such directory\n").await?;
                         }
                     }
-                } else if crate::programs::get_program(process, args).await?.is_none() {
-                    bail!("Command not found: {command}");
+                } else {
+                    let mut process = process.clone();
+                    process.args = args.clone();
+                    if crate::programs::get_program(&mut process, args)
+                        .await?
+                        .is_none()
+                    {
+                        bail!("Command not found: {command}");
+                    }
                 }
                 Ok(())
             }
@@ -336,7 +353,7 @@ async fn await_abortable_future<T, F: Future<Output = Result<T>>>(
     result
 }
 
-async fn run_script(process: &mut Process, source: &str) -> Result<()> {
+pub async fn run_script(process: &mut Process, source: &str) -> Result<()> {
     let lines = source.split('\n');
     for line in lines {
         if line.trim().is_empty() {
@@ -364,8 +381,8 @@ struct Options {
     script: Option<String>,
 }
 
-pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn sh(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
 
     let mut stdout = process.stdout.clone();
     let mut stdin = process.stdin.clone();
@@ -485,6 +502,7 @@ mod test {
             stdout,
             signal_registrar,
             cwd,
+            args: Vec::new(),
             env: Default::default(),
         }
     }

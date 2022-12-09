@@ -13,8 +13,8 @@ struct Options {
     args: Vec<String>,
 }
 
-pub async fn cowsay(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn cowsay(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     let text = if options.args.is_empty() {
         let mut text = String::new();
         process.stdin.read_to_string(&mut text).await?;

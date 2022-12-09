@@ -15,8 +15,8 @@ struct Options {
     target: Option<String>,
 }
 
-pub async fn ls(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn ls(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     let path = {
         let dir = process.get_path(options.target.unwrap_or_else(|| ".".into()))?;
         if !dir.exists()? {

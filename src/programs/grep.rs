@@ -32,8 +32,8 @@ pub async fn grep_inner(
     Ok(())
 }
 
-pub async fn grep(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn grep(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     let pattern = Regex::new(&options.pattern)?;
 
     if options.files.is_empty() {

@@ -11,6 +11,7 @@ pub struct Process {
     pub stderr: OutputStream,
     pub env: HashMap<String, String>,
     pub cwd: VfsPath,
+    pub args: Vec<String>,
     // Used by a process to indicate it's listening for signals
     // Currently we just have the ^C signal, but we might add more
     // later. I don't know, I'm tired

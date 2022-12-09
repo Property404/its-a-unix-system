@@ -11,8 +11,8 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn tee(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn tee(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     let mut outs = Vec::new();
     let mut backends = Vec::new();
 

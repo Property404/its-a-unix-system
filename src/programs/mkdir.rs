@@ -10,8 +10,8 @@ struct Options {
     directories: Vec<String>,
 }
 
-pub async fn mkdir(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn mkdir(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     for arg in options.directories.into_iter() {
         process.get_path(arg)?.create_dir_all()?;
     }

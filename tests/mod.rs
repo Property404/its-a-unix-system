@@ -60,6 +60,7 @@ async fn integration_test() -> Result<()> {
         env: Default::default(),
         signal_registrar,
         cwd: rootfs,
+        args: vec!["-sh".into()],
     };
     shell.env.insert("PATH".into(), "bin".into());
 
@@ -71,9 +72,8 @@ async fn integration_test() -> Result<()> {
             while let Some(command) = command_rx.next().await {
                 match command {
                     Command::Run(value) => {
-                        programs::shell(&mut shell, vec!["sh".into(), "-c".into(), value])
-                            .await
-                            .unwrap()
+                        shell.args = vec!["sh".into(), "-c".into(), value];
+                        programs::shell(&mut shell).await.unwrap()
                     }
                     Command::Expect(value) => {
                         assert_eq!(value, stdout_rx.get_line().await?);

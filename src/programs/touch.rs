@@ -11,8 +11,8 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn touch(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn touch(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     for arg in options.files.into_iter() {
         if arg == "me" {
             process.stderr.write_all(b"Absolutely not.\n").await?;

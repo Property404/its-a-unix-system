@@ -19,8 +19,8 @@ struct Options {
     risque: bool,
 }
 
-pub async fn fortune(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn fortune(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     // We keep a history of past fortunes so we don't repeat too often.
     let (fortunes_told, mut repeat_file) = {
         let path = process.get_path(REPEAT_FILE)?;

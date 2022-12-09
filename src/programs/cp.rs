@@ -11,8 +11,8 @@ struct Options {
     dest: String,
 }
 
-pub async fn cp(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn cp(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     let src = process.get_path(&options.src)?;
     if !src.exists()? {
         bail!("src does not exist");

@@ -1,0 +1,3 @@
+#!sh
+# An alias for "ls"
+ls ${@}

@@ -6,11 +6,8 @@ mod common;
 pub use sh::sh as shell;
 
 // Run a program from '/bin' or somewhere.
-async fn exec_external_program(
-    process: &mut Process,
-    mut args: Vec<String>,
-) -> Result<Option<Result<()>>> {
-    let command = args[0].clone();
+async fn exec_external_program(process: &mut Process) -> Result<Option<Result<()>>> {
+    let command = process.args[0].clone();
     let mut run_command = false;
 
     let root = process.cwd.root();
@@ -21,11 +18,12 @@ async fn exec_external_program(
         .split(':')
         .map(|path| root.join(path));
 
+    let mut contents = String::new();
     for path in paths {
         let path = path?;
         for entity in path.read_dir()? {
             if entity.is_file()? && entity.filename() == command {
-                args.insert(1, entity.as_str().into());
+                entity.open_file()?.read_to_string(&mut contents)?;
                 run_command = true;
             }
         }
@@ -33,7 +31,7 @@ async fn exec_external_program(
 
     //  Necessary to do it this way because VfsPath::walk_dir() does not return a Sync object
     if run_command {
-        Ok(Some(shell(process, args).await))
+        Ok(Some(sh::run_script(process, &contents).await))
     } else {
         Ok(None)
     }
@@ -52,11 +50,11 @@ macro_rules! implement {
             let command = args[0].clone();
             let result = $(
                 if command == stringify!($cmd) {
-                    Some($cmd::$cmd(process, args).await)
+                    Some($cmd::$cmd(process).await)
                 } else
             )*
             {
-                exec_external_program(process, args).await?
+                exec_external_program(process).await?
             };
 
             Ok(match result {

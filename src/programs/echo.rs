@@ -13,8 +13,8 @@ struct Options {
     args: Vec<String>,
 }
 
-pub async fn echo(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn echo(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
     let mut args = options.args.into_iter();
     if let Some(first_argument) = args.next() {
         process.stdout.write_all(first_argument.as_bytes()).await?;

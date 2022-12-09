@@ -23,8 +23,8 @@ pub async fn rev_inner(stream: &mut InputStream, out: &mut OutputStream) -> Resu
     Ok(())
 }
 
-pub async fn rev(process: &mut Process, args: Vec<String>) -> Result<()> {
-    let options = Options::try_parse_from(args.into_iter())?;
+pub async fn rev(process: &mut Process) -> Result<()> {
+    let options = Options::try_parse_from(process.args.iter())?;
 
     if options.files.is_empty() {
         let mut stdin = process.stdin.clone();

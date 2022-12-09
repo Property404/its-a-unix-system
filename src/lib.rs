@@ -26,13 +26,14 @@ async fn run() -> Result<()> {
         env: Default::default(),
         signal_registrar,
         cwd: rootfs,
+        args: vec!["-sh".into()],
     };
     shell
         .env
         .insert("PATH".into(), DEFAULT_SEARCH_PATHS.join(":"));
 
     try_join!(backend.run(), async {
-        programs::shell(&mut shell, Default::default()).await?;
+        programs::shell(&mut shell).await?;
         // Could be concurrent
         stdout.shutdown().await?;
         stdin.shutdown().await?;
