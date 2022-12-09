@@ -184,6 +184,9 @@ fn tokenize(process: &Process, source: &str) -> Result<Vec<BasicToken>> {
                     buffer.clear();
                     quote_level = QuoteType::None;
                     continue;
+                } else if c == '$' {
+                    parse_variable(process, &mut source)?;
+                    continue;
                 }
             }
         };
