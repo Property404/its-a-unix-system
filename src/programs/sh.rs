@@ -1,6 +1,9 @@
 use crate::{
     process::Process,
-    programs::common::readline::{FileBasedHistory, Readline},
+    programs::common::{
+        extendable_iterator::ExtendableIterator,
+        readline::{FileBasedHistory, Readline},
+    },
     streams,
 };
 use anyhow::{anyhow, bail, Result};
@@ -97,11 +100,31 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
     Ok(root)
 }
 
-fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
+fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> Result<()> {
+    if source.next() != Some('{') {
+        bail!("Currently only ${{...}} variables are supported");
+    }
+
+    let mut value = String::new();
+    while let Some(c) = source.next() {
+        if c == '}' {
+            if let Some(value) = process.env.get(&value) {
+                source.prepend(value.chars());
+            }
+            return Ok(());
+        } else {
+            value.push(c);
+        }
+    }
+
+    Err(anyhow!("Syntax error: brace mismatch"))
+}
+
+fn tokenize(process: &Process, source: &str) -> Result<Vec<BasicToken>> {
     let mut quote_level = QuoteType::None;
     let mut tokens = Vec::new();
     let mut buffer = String::new();
-    let mut source = source.chars();
+    let mut source = ExtendableIterator::new(source.chars());
     let mut c = None;
     loop {
         let last_char = c;
@@ -118,11 +141,15 @@ fn tokenize(source: &str) -> Result<Vec<BasicToken>> {
                     continue;
                 } else if c == '#' {
                     break;
+                } else if c == '$' {
+                    parse_variable(process, &mut source)?;
+                    continue;
                 } else if [' ', '\n', '\t', '|', '>', '<'].contains(&c) {
                     if !buffer.is_empty() {
                         tokens.push(BasicToken::Value(buffer.clone()));
                         buffer.clear();
                     }
+
                     if c == '|' {
                         tokens.push(BasicToken::Pipe);
                     } else if c == '>' {
@@ -312,7 +339,7 @@ async fn run_script(process: &mut Process, source: &str) -> Result<()> {
         if line.trim().is_empty() {
             continue;
         }
-        let tokens = tokenize(line)?;
+        let tokens = tokenize(process, line)?;
         if tokens.is_empty() {
             continue;
         }
@@ -441,11 +468,45 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use futures::channel::mpsc;
+    use vfs::MemoryFS;
+
+    fn make_process() -> Process {
+        let (stdin, stdout, _) = streams::pipe();
+        let (signal_registrar, _) = mpsc::unbounded();
+        let stderr = stdout.clone();
+        let cwd: VfsPath = MemoryFS::new().into();
+        Process {
+            stdin,
+            stderr,
+            stdout,
+            signal_registrar,
+            cwd,
+            env: Default::default(),
+        }
+    }
+
+    #[test]
+    fn variables() {
+        let mut process = make_process();
+        process.env.insert("foo".into(), "FOO".into());
+        process.env.insert("bar".into(), "BAR".into());
+        process.env.insert("baz".into(), "BAZ".into());
+        let source = "echo ${foo} ${bar}${baz}";
+        let tokens = tokenize(&process, source).unwrap();
+        let expected = vec![
+            BasicToken::Value("echo".into()),
+            BasicToken::Value("FOO".into()),
+            BasicToken::Value("BARBAZ".into()),
+        ];
+        assert_eq!(tokens, expected);
+    }
 
     #[test]
     fn tokenize_pipe() {
+        let process = make_process();
         let source = "echo\thi '|'   there | cowsay";
-        let tokens = tokenize(source).unwrap();
+        let tokens = tokenize(&process, source).unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("hi".into()),
@@ -459,8 +520,9 @@ mod test {
 
     #[test]
     fn tokenize_fileio() {
+        let process = make_process();
         let source = "fortune >> waa";
-        let tokens = tokenize(source).unwrap();
+        let tokens = tokenize(&process, source).unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: true },
@@ -469,7 +531,7 @@ mod test {
         assert_eq!(tokens, expected);
 
         let source = "fortune > waa";
-        let tokens = tokenize(source).unwrap();
+        let tokens = tokenize(&process, source).unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: false },
