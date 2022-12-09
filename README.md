@@ -15,6 +15,10 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 
 * File editor
 
+### Known bugs
+
+* Running `sh -c 'echo -- ${2}'` will recurse forever.
+
 ## Example
 
 ```
