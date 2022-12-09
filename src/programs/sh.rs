@@ -3,16 +3,17 @@ use crate::{
     programs::common::readline::{FileBasedHistory, Readline},
     streams,
 };
-use anyhow::{anyhow, bail, Error, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::Parser;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
     io::AsyncWriteExt,
-    select,
+    join, select,
     stream::{AbortHandle, Abortable},
     try_join,
 };
+use std::future::Future;
 use vfs::VfsPath;
 
 const HISTORY_FILE: &str = "/etc/.sh_history";
@@ -274,6 +275,37 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
     .boxed()
 }
 
+async fn await_abortable_future<T, F: Future<Output = Result<T>>>(
+    mut abort_channel_rx: oneshot::Receiver<()>,
+    future: F,
+) -> Result<T> {
+    let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel::<()>();
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    let future = Abortable::new(future, abort_registration);
+    let (_, result) = join! {
+        async {
+            select! {
+                _ = abort_channel_rx => {
+                    abort_handle.abort();
+                },
+                _ = meta_abort_channel_rx => {
+                }
+            };
+        },
+        async {
+            let result = match future.await {
+                Ok(inner) => inner,
+                Err(_) =>  {
+                    Err(anyhow!("INTERRUPT"))?
+                }
+            };
+            let _ = meta_abort_channel_tx.send(());
+            result
+        }
+    };
+    result
+}
+
 async fn run_script(process: &mut Process, source: &str) -> Result<()> {
     let lines = source.split('\n');
     for line in lines {
@@ -286,34 +318,9 @@ async fn run_script(process: &mut Process, source: &str) -> Result<()> {
         }
         let root_token = parse(tokens)?;
 
-        let (abort_channel_tx, mut abort_channel_rx) = oneshot::channel();
-        let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel();
-
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
+        let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
         process.signal_registrar.unbounded_send(abort_channel_tx)?;
-        let future = Abortable::new(dispatch(process, root_token), abort_registration);
-        try_join! {
-            async {
-                select! {
-                    _ = abort_channel_rx => {
-                        abort_handle.abort();
-                    },
-                    _ = meta_abort_channel_rx => {
-                    }
-                };
-                Result::<(), Error>::Ok(())
-            },
-            async {
-                match future.await {
-                    Ok(inner) => inner?,
-                    Err(_) =>  {
-                        Err(anyhow!("INTERRUPT"))?
-                    }
-                };
-                let _ = meta_abort_channel_tx.send(());
-                Ok(())
-            }
-        }?;
+        await_abortable_future(abort_channel_rx, dispatch(process, root_token)).await?;
     }
     Ok(())
 }
@@ -404,9 +411,13 @@ pub async fn sh(process: &mut Process, args: Vec<String>) -> Result<()> {
             Ok(suggestions)
         };
 
-        let line = match readline
-            .get_line(&mut stdin, &mut stdout, Some(tab_completer))
-            .await
+        let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
+        process.signal_registrar.unbounded_send(abort_channel_tx)?;
+        let line: String = match await_abortable_future::<String, _>(
+            abort_channel_rx,
+            readline.get_line(&mut stdin, &mut stdout, Some(tab_completer)),
+        )
+        .await
         {
             Ok(line) => line,
             Err(e) => {
