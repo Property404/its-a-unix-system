@@ -39,7 +39,9 @@ fn generate_bin_directory() -> Result<()> {
     for bin in bins {
         println!("{bin}");
         let mut file = File::create(&bin).unwrap();
-        file.write_all(b"echo 'This is an internal command.'\n")?;
+        file.write_all(b"#!sh\n")?;
+        file.write_all(b"# This is an internal command.\n")?;
+        file.write_all(format!("{bin} ${{@}}\n").as_bytes())?;
     }
 
     env::set_current_dir("../..")?;

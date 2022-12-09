@@ -389,12 +389,15 @@ pub async fn sh(process: &mut Process) -> Result<()> {
 
     if let Some(file_path) = options.script {
         let mut script = String::new();
+        let mut process = process.clone();
         process
             .get_path(&file_path)?
             .open_file()?
             .read_to_string(&mut script)?;
+        // Get rid of the 'sh' argument.
+        process.args = process.args.iter().skip(1).cloned().collect();
 
-        run_script(process, &script).await?;
+        run_script(&mut process, &script).await?;
         return Ok(());
     }
 
