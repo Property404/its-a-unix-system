@@ -3,6 +3,7 @@ use crate::{
     programs::common::{
         extendable_iterator::ExtendableIterator,
         readline::{FileBasedHistory, Readline},
+        shell_commands,
     },
     streams,
 };
@@ -290,19 +291,9 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                 }
                 let command = args[0].clone();
                 if command == "cd" {
-                    if args.len() > 1 {
-                        let new_path = process.get_path(&args[1])?;
-                        if new_path.is_dir()? {
-                            process.cwd = new_path;
-                        } else {
-                            process.stderr.write_all(b"cd: ").await?;
-                            process
-                                .stdout
-                                .write_all(new_path.as_str().as_bytes())
-                                .await?;
-                            process.stderr.write_all(b": No such directory\n").await?;
-                        }
-                    }
+                    shell_commands::cd(process, args).await?;
+                } else if command == "env" {
+                    shell_commands::env(process, args).await?;
                 } else {
                     let mut process = process.clone();
                     process.args = args.clone();
