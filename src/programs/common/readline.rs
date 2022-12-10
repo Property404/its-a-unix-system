@@ -62,6 +62,20 @@ impl History for FileBasedHistory {
     }
 }
 
+/// "History" that records nothing
+#[derive(Default)]
+pub struct NullHistory;
+
+impl History for NullHistory {
+    fn get_records(&self) -> Result<Vec<String>> {
+        Ok(Vec::new())
+    }
+
+    fn add_record(&self, _record: &str) -> Result<()> {
+        Ok(())
+    }
+}
+
 /// A GNU Readline-like implementation.
 pub struct Readline<T: History> {
     /// The prompt to show, e.g "$ "

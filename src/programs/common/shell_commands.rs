@@ -3,7 +3,10 @@
 //! Note that these don't take arguments from the process, because that process is the shell
 //! itself.
 
-use crate::process::Process;
+use crate::{
+    process::Process,
+    programs::common::readline::{NullHistory, Readline},
+};
 use anyhow::Result;
 use clap::Parser;
 use futures::AsyncWriteExt;
@@ -46,6 +49,31 @@ pub async fn env(process: &mut Process, args: Vec<String>) -> Result<()> {
             .write_all(format!("{id}={value}\n").as_bytes())
             .await?;
     }
+
+    Ok(())
+}
+
+pub async fn read(process: &mut Process, args: Vec<String>) -> Result<()> {
+    /// Write user input to a variable.
+    #[derive(Parser)]
+    struct Options {
+        /// The variable to read to.
+        variable: String,
+        /// A prompt to use.
+        #[arg(short, long)]
+        prompt: Option<String>,
+    }
+    let options = Options::try_parse_from(args.iter())?;
+
+    let mut stdout = process.stdout.clone();
+    let mut stdin = process.stdin.clone();
+
+    let mut readline = Readline::new(options.prompt.unwrap_or_default(), NullHistory::default());
+
+    let line = readline
+        .get_line(&mut stdin, &mut stdout, |_, _| Ok(Vec::new()))
+        .await?;
+    process.env.insert(options.variable, line);
 
     Ok(())
 }

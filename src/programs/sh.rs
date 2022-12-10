@@ -294,6 +294,8 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                     shell_commands::cd(process, args).await?;
                 } else if command == "env" {
                     shell_commands::env(process, args).await?;
+                } else if command == "read" {
+                    shell_commands::read(process, args).await?;
                 } else {
                     let mut process = process.clone();
                     process.args = args.clone();
