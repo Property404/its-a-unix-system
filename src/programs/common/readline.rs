@@ -78,7 +78,7 @@ impl<T: History> Readline<T> {
         &mut self,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
-        completer: Option<F>,
+        completer: F,
     ) -> Result<String>
     where
         F: Fn(String, usize) -> Result<Vec<String>>,
@@ -100,7 +100,7 @@ impl<T: History> Readline<T> {
         &self,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
-        completer: Option<F>,
+        completer: F,
     ) -> Result<String>
     where
         F: Fn(String, usize) -> Result<Vec<String>>,
@@ -235,8 +235,6 @@ impl<T: History> Readline<T> {
                 cursor = 0;
             // Tab completions
             } else if c == '\t' {
-                let Some(ref completer) = completer else {continue;};
-
                 let start = buffer[0..cursor].rfind(' ').map(|x| x + 1).unwrap_or(0);
                 let section = &buffer[0..cursor];
                 let word = &section[start..];

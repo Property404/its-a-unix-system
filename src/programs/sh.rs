@@ -537,7 +537,7 @@ pub async fn sh(process: &mut Process) -> Result<()> {
         process.signal_registrar.unbounded_send(abort_channel_tx)?;
         let line: String = match await_abortable_future::<String, _>(
             abort_channel_rx,
-            readline.get_line(&mut stdin, &mut stdout, Some(tab_completer)),
+            readline.get_line(&mut stdin, &mut stdout, tab_completer),
         )
         .await
         {
