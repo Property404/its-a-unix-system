@@ -11,7 +11,7 @@ use clap::Parser;
 use futures::{
     channel::oneshot,
     future::{BoxFuture, FutureExt},
-    io::AsyncWriteExt,
+    io::{AsyncReadExt, AsyncWriteExt},
     join, select,
     stream::{AbortHandle, Abortable},
     try_join,
@@ -100,14 +100,41 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
     Ok(root)
 }
 
-fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> Result<()> {
-    if source.next() != Some('{') {
-        bail!("Currently only ${{...}} variables are supported");
+async fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> Result<()> {
+    let Some(delimiter) = source.next() else {
+        bail!("Syntax error: No identifier");
+    };
+    if delimiter != '{' && delimiter != '(' {
+        bail!("Currently only ${{...}} variables and subshells are supported");
     }
 
     let mut value = String::new();
     while let Some(c) = source.next() {
-        if c == '}' {
+        // Subshell
+        if delimiter == '(' && c == ')' {
+            let (mut reader, mut stdout, mut backend) = streams::pipe();
+
+            let mut process = process.clone();
+            process.stdout = stdout.clone();
+
+            let (_, output): (Result<()>, Result<String>) = join! {
+                backend.run(),
+                async {
+                    let mut output = String::new();
+                    run_script(&mut process, &value).await?;
+                    stdout.flush().await?;
+                    stdout.shutdown().await?;
+                    reader.read_to_string(&mut output).await?;
+                    reader.shutdown().await?;
+                    Ok(output)
+                },
+            };
+            let output = output?;
+
+            source.prepend(output.chars());
+            return Ok(());
+        // Variables
+        } else if delimiter == '{' && c == '}' {
             if let Some(value) = process.env.get(&value) {
                 source.prepend(value.chars());
             // Display all args (except the first)
@@ -130,7 +157,7 @@ fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> R
     Err(anyhow!("Syntax error: brace mismatch"))
 }
 
-fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>> {
+async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>> {
     let mut quote_level = QuoteType::None;
     let mut tokens = Vec::new();
     let mut buffer = String::new();
@@ -153,7 +180,7 @@ fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>> {
                 } else if c == '#' {
                     break;
                 } else if c == '$' {
-                    parse_variable(process, &mut source)?;
+                    parse_variable(process, &mut source).await?;
                     continue;
                 } else if [' ', '\n', '\t', '|', '>', '<'].contains(&c) {
                     if !buffer.is_empty() {
@@ -196,7 +223,7 @@ fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>> {
                     quote_level = QuoteType::None;
                     continue;
                 } else if c == '$' {
-                    parse_variable(process, &mut source)?;
+                    parse_variable(process, &mut source).await?;
                     continue;
                 }
             }
@@ -365,23 +392,26 @@ async fn await_abortable_future<T, F: Future<Output = Result<T>>>(
     result
 }
 
-pub async fn run_script(process: &mut Process, source: &str) -> Result<()> {
-    let lines = source.split('\n');
-    for line in lines {
-        if line.trim().is_empty() {
-            continue;
-        }
-        let tokens = tokenize(process, line)?;
-        if tokens.is_empty() {
-            continue;
-        }
-        let root_token = parse(tokens)?;
+pub fn run_script<'a>(process: &'a mut Process, source: &'a str) -> BoxFuture<'a, Result<()>> {
+    async {
+        let lines = source.split('\n');
+        for line in lines {
+            if line.trim().is_empty() {
+                continue;
+            }
+            let tokens = tokenize(process, line).await?;
+            if tokens.is_empty() {
+                continue;
+            }
+            let root_token = parse(tokens)?;
 
-        let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
-        process.signal_registrar.unbounded_send(abort_channel_tx)?;
-        await_abortable_future(abort_channel_rx, dispatch(process, root_token)).await?;
+            let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
+            process.signal_registrar.unbounded_send(abort_channel_tx)?;
+            await_abortable_future(abort_channel_rx, dispatch(process, root_token)).await?;
+        }
+        Ok(())
     }
-    Ok(())
+    .boxed()
 }
 /// Unix shell.
 #[derive(Parser)]
@@ -522,14 +552,14 @@ mod test {
         }
     }
 
-    #[test]
-    fn variables() {
+    #[futures_test::test]
+    async fn variables() {
         let mut process = make_process();
         process.env.insert("foo".into(), "FOO".into());
         process.env.insert("bar".into(), "BAR".into());
         process.env.insert("baz".into(), "BAZ".into());
         let source = "echo ${foo} ${bar}${baz}";
-        let tokens = tokenize(&mut process, source).unwrap();
+        let tokens = tokenize(&mut process, source).await.unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("FOO".into()),
@@ -538,11 +568,11 @@ mod test {
         assert_eq!(tokens, expected);
     }
 
-    #[test]
-    fn tokenize_pipe() {
+    #[futures_test::test]
+    async fn tokenize_pipe() {
         let mut process = make_process();
         let source = "echo\thi '|'   there | cowsay";
-        let tokens = tokenize(&mut process, source).unwrap();
+        let tokens = tokenize(&mut process, source).await.unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("hi".into()),
@@ -554,11 +584,11 @@ mod test {
         assert_eq!(tokens, expected);
     }
 
-    #[test]
-    fn tokenize_fileio() {
+    #[futures_test::test]
+    async fn tokenize_fileio() {
         let mut process = make_process();
         let source = "fortune >> waa";
-        let tokens = tokenize(&mut process, source).unwrap();
+        let tokens = tokenize(&mut process, source).await.unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: true },
@@ -567,7 +597,7 @@ mod test {
         assert_eq!(tokens, expected);
 
         let source = "fortune > waa";
-        let tokens = tokenize(&mut process, source).unwrap();
+        let tokens = tokenize(&mut process, source).await.unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: false },
