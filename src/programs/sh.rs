@@ -117,19 +117,25 @@ async fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>
             let mut process = process.clone();
             process.stdout = stdout.clone();
 
-            let (_, output): (Result<()>, Result<String>) = join! {
-                backend.run(),
-                async {
-                    let mut output = String::new();
-                    run_script(&mut process, &value).await?;
-                    stdout.flush().await?;
-                    stdout.shutdown().await?;
-                    reader.read_to_string(&mut output).await?;
-                    reader.shutdown().await?;
-                    Ok(output)
-                },
+            let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
+            process.signal_registrar.unbounded_send(abort_channel_tx)?;
+
+            let future = async {
+                let (_, output): (Result<()>, Result<String>) = join! {
+                    backend.run(),
+                    async {
+                        let mut output = String::new();
+                        run_script(&mut process, &value).await?;
+                        stdout.flush().await?;
+                        stdout.shutdown().await?;
+                        reader.read_to_string(&mut output).await?;
+                        reader.shutdown().await?;
+                        Ok(output)
+                    },
+                };
+                output
             };
-            let output = output?;
+            let output = await_abortable_future(abort_channel_rx, future).await?;
 
             source.prepend(output.chars());
             return Ok(());
