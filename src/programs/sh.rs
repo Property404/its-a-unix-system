@@ -130,12 +130,13 @@ fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> R
     Err(anyhow!("Syntax error: brace mismatch"))
 }
 
-fn tokenize(process: &Process, source: &str) -> Result<Vec<BasicToken>> {
+fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>> {
     let mut quote_level = QuoteType::None;
     let mut tokens = Vec::new();
     let mut buffer = String::new();
     let mut source = ExtendableIterator::new(source.chars());
     let mut c = None;
+
     loop {
         let last_char = c;
         c = source.next();
@@ -209,6 +210,17 @@ fn tokenize(process: &Process, source: &str) -> Result<Vec<BasicToken>> {
     if !buffer.is_empty() {
         tokens.push(BasicToken::Value(buffer.clone()));
     }
+
+    // Assignment is kind of weird
+    if let Some(BasicToken::Value(value)) = &tokens.get(0) {
+        if value.contains('=') {
+            let (identifier, value) = value.split_once('=').expect("Bug: expected equals sign");
+            process.env.insert(identifier.into(), value.into());
+
+            return Ok(tokens.into_iter().skip(1).collect());
+        }
+    }
+
     Ok(tokens)
 }
 
@@ -517,7 +529,7 @@ mod test {
         process.env.insert("bar".into(), "BAR".into());
         process.env.insert("baz".into(), "BAZ".into());
         let source = "echo ${foo} ${bar}${baz}";
-        let tokens = tokenize(&process, source).unwrap();
+        let tokens = tokenize(&mut process, source).unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("FOO".into()),
@@ -528,9 +540,9 @@ mod test {
 
     #[test]
     fn tokenize_pipe() {
-        let process = make_process();
+        let mut process = make_process();
         let source = "echo\thi '|'   there | cowsay";
-        let tokens = tokenize(&process, source).unwrap();
+        let tokens = tokenize(&mut process, source).unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("hi".into()),
@@ -544,9 +556,9 @@ mod test {
 
     #[test]
     fn tokenize_fileio() {
-        let process = make_process();
+        let mut process = make_process();
         let source = "fortune >> waa";
-        let tokens = tokenize(&process, source).unwrap();
+        let tokens = tokenize(&mut process, source).unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: true },
@@ -555,7 +567,7 @@ mod test {
         assert_eq!(tokens, expected);
 
         let source = "fortune > waa";
-        let tokens = tokenize(&process, source).unwrap();
+        let tokens = tokenize(&mut process, source).unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: false },

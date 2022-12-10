@@ -42,6 +42,14 @@ async fn integration_test_inner(tx: UnboundedSender<Command>) -> Result<()> {
     tester.expect("hi")?;
     tester.run("rm a")?;
 
+    // Environmental variables
+    tester.run("foo=bar")?;
+    tester.run("echo ${foo}${foo}")?;
+    tester.expect("barbar")?;
+    tester.run("foo=foo${foo}")?;
+    tester.run("echo ${foo}")?;
+    tester.expect("foobar")?;
+
     Ok(())
 }
 
