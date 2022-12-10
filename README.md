@@ -17,7 +17,6 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 
 ### Known bugs
 
-* Running `sh -c 'echo -- ${2}'` will recurse forever
 * Running `foo=bar echo ${foo}` will print `foo`'s old value
 
 ## Example

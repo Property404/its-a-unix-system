@@ -29,6 +29,7 @@ enum BasicToken {
     Value(String),
 }
 
+#[derive(PartialEq, Eq)]
 enum QuoteType {
     None,
     Single,
@@ -100,7 +101,9 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
     Ok(root)
 }
 
-async fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> Result<()> {
+// Parses a variable or substring, injects the value into the source iterator, and returns the
+// length of the value.
+async fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>) -> Result<usize> {
     let Some(delimiter) = source.next() else {
         bail!("Syntax error: No identifier");
     };
@@ -138,23 +141,28 @@ async fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>
             let output = await_abortable_future(abort_channel_rx, future).await?;
 
             source.prepend(output.chars());
-            return Ok(());
+            return Ok(output.len());
         // Variables
         } else if delimiter == '{' && c == '}' {
-            if let Some(value) = process.env.get(&value) {
-                source.prepend(value.chars());
+            let value = if let Some(value) = process.env.get(&value) {
+                value.to_string()
             // Display all args (except the first)
             } else if value == "@" {
                 let args: Vec<String> = process.args.iter().skip(1).cloned().collect();
-                let args = args.join(" ");
-                source.prepend(args.chars());
+                args.join(" ")
             // Display an argument
             } else if let Ok(value) = value.parse::<u8>() {
                 if let Some(value) = process.args.get(value as usize) {
-                    source.prepend(value.chars());
+                    value.to_string()
+                } else {
+                    String::new()
                 }
-            }
-            return Ok(());
+            } else {
+                String::new()
+            };
+
+            source.prepend(value.chars());
+            return Ok(value.len());
         } else {
             value.push(c);
         }
@@ -168,69 +176,85 @@ async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>
     let mut tokens = Vec::new();
     let mut buffer = String::new();
     let mut source = ExtendableIterator::new(source.chars());
+    // We don't consider quote changes or start of variables when we're inside the result of a
+    // variable/subshell
+    let mut ignore_quotes: usize = 0;
+    // Current character
     let mut c = None;
 
     loop {
         let last_char = c;
         c = source.next();
         let Some(c) = c else {break;};
+        ignore_quotes = ignore_quotes.saturating_sub(1);
 
-        match quote_level {
-            QuoteType::None => {
-                if c == '\'' {
-                    quote_level = QuoteType::Single;
-                    continue;
-                } else if c == '"' {
-                    quote_level = QuoteType::Double;
-                    continue;
-                } else if c == '#' {
-                    break;
-                } else if c == '$' {
-                    parse_variable(process, &mut source).await?;
-                    continue;
-                } else if [' ', '\n', '\t', '|', '>', '<'].contains(&c) {
-                    if !buffer.is_empty() {
+        if quote_level == QuoteType::None && [' ', '\n', '\t'].contains(&c) {
+            if !buffer.is_empty() {
+                tokens.push(BasicToken::Value(buffer.clone()));
+                buffer.clear();
+            }
+            continue;
+        }
+
+        if ignore_quotes == 0 {
+            match quote_level {
+                QuoteType::None => {
+                    if c == '\'' {
+                        quote_level = QuoteType::Single;
+                        continue;
+                    } else if c == '"' {
+                        quote_level = QuoteType::Double;
+                        continue;
+                    } else if c == '#' {
+                        break;
+                    } else if c == '$' {
+                        // Extra 1 because we sub on beginning of loop
+                        ignore_quotes = 1 + parse_variable(process, &mut source).await?;
+                        continue;
+                    } else if ['|', '>', '<'].contains(&c) {
+                        if !buffer.is_empty() {
+                            tokens.push(BasicToken::Value(buffer.clone()));
+                            buffer.clear();
+                        }
+
+                        if c == '|' {
+                            tokens.push(BasicToken::Pipe);
+                        } else if c == '>' {
+                            if last_char == Some('>') {
+                                if !matches!(
+                                    tokens.pop(),
+                                    Some(BasicToken::FileRedirectOut { append: false })
+                                ) {
+                                    bail!("Syntax error: '>' symbol unexpected here");
+                                }
+                                tokens.push(BasicToken::FileRedirectOut { append: true });
+                            } else {
+                                tokens.push(BasicToken::FileRedirectOut { append: false });
+                            }
+                        } else if c == '<' {
+                            tokens.push(BasicToken::FileRedirectIn);
+                        }
+                        continue;
+                    }
+                }
+                QuoteType::Single => {
+                    if c == '\'' {
                         tokens.push(BasicToken::Value(buffer.clone()));
                         buffer.clear();
+                        quote_level = QuoteType::None;
+                        continue;
                     }
-
-                    if c == '|' {
-                        tokens.push(BasicToken::Pipe);
-                    } else if c == '>' {
-                        if last_char == Some('>') {
-                            if !matches!(
-                                tokens.pop(),
-                                Some(BasicToken::FileRedirectOut { append: false })
-                            ) {
-                                bail!("Syntax error: '>' symbol unexpected here");
-                            }
-                            tokens.push(BasicToken::FileRedirectOut { append: true });
-                        } else {
-                            tokens.push(BasicToken::FileRedirectOut { append: false });
-                        }
-                    } else if c == '<' {
-                        tokens.push(BasicToken::FileRedirectIn);
+                }
+                QuoteType::Double => {
+                    if c == '"' {
+                        tokens.push(BasicToken::Value(buffer.clone()));
+                        buffer.clear();
+                        quote_level = QuoteType::None;
+                        continue;
+                    } else if c == '$' {
+                        ignore_quotes = 1 + parse_variable(process, &mut source).await?;
+                        continue;
                     }
-                    continue;
-                }
-            }
-            QuoteType::Single => {
-                if c == '\'' {
-                    tokens.push(BasicToken::Value(buffer.clone()));
-                    buffer.clear();
-                    quote_level = QuoteType::None;
-                    continue;
-                }
-            }
-            QuoteType::Double => {
-                if c == '"' {
-                    tokens.push(BasicToken::Value(buffer.clone()));
-                    buffer.clear();
-                    quote_level = QuoteType::None;
-                    continue;
-                } else if c == '$' {
-                    parse_variable(process, &mut source).await?;
-                    continue;
                 }
             }
         };
