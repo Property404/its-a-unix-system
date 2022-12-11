@@ -511,7 +511,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 [[package]]
 name = "vfs"
 version = "0.8.0"
-source = "git+https://github.com/property404/rust-vfs?branch=Property404/point-2#18deae27bde7a2db203750e0d3242c1cd9ec2326"
+source = "git+https://github.com/Property404/rust-vfs?branch=Property404/join-root#03630e48960fcc6fd0e816e91fa0e2adacc11a08"
 
 [[package]]
 name = "walkdir"

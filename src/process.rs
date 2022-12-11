@@ -21,20 +21,12 @@ pub struct Process {
 impl Process {
     /// Get VFS path from , as you would type into a Unix shell.
     pub fn get_path(&self, path: impl AsRef<str>) -> Result<VfsPath> {
-        let mut root = false;
         let mut path = path.as_ref();
-        while path.starts_with('/') {
-            path = &path[1..];
-            root = true;
-        }
-        while path.ends_with('/') {
+
+        while path.len() > 1 && path.ends_with('/') {
             path = &path[0..path.len() - 1]
         }
 
-        Ok(if root {
-            self.cwd.root().join(path)
-        } else {
-            self.cwd.join(path)
-        }?)
+        Ok(self.cwd.join(path)?)
     }
 }
