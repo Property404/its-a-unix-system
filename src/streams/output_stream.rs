@@ -69,6 +69,10 @@ impl<T: TerminalWriter> OutputStreamBackend<T> {
                             }
                         },
                         Command::Shutdown(signal) => {
+                            if ! buffer.is_empty() {
+                                self.write(&buffer)?;
+                                buffer.clear();
+                            }
                             self.writer.shutdown()?;
                             signal.send(()).expect("Could not send shutdown signal");
                             return Ok(());

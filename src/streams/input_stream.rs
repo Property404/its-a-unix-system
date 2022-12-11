@@ -126,7 +126,13 @@ impl InputStream {
         let mut buffer = [0; 1];
 
         loop {
-            self.read_exact(&mut buffer).await?;
+            if let Err(e) = self.read_exact(&mut buffer).await {
+                if line.is_empty() {
+                    Err(e)?;
+                } else {
+                    return Ok(String::from_utf8_lossy(&line).to_string());
+                }
+            }
             let byte = buffer[0];
             if byte == NEWLINE {
                 return Ok(String::from_utf8_lossy(&line).to_string());
