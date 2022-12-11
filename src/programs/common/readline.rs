@@ -253,6 +253,7 @@ impl<T: History> Readline<T> {
                 let section = &buffer[0..cursor];
                 let word = &section[start..];
                 let mut suggestions = completer(section.into(), start)?;
+                suggestions.sort();
 
                 if suggestions.is_empty() {
                     skip_refresh = true;
