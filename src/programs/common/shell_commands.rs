@@ -11,6 +11,10 @@ use anyhow::Result;
 use clap::Parser;
 use futures::AsyncWriteExt;
 
+/// List of all internal shell commands.
+pub const COMMANDS: [&str; 3] = ["cd", "env", "read"];
+
+/// Change directory.
 pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<()> {
     /// Change directory.
     #[derive(Parser)]
@@ -37,6 +41,7 @@ pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<()> {
     Ok(())
 }
 
+/// Display environmental variables.
 pub async fn env(process: &mut Process, args: Vec<String>) -> Result<()> {
     /// Display environmental variables.
     #[derive(Parser)]
@@ -53,6 +58,7 @@ pub async fn env(process: &mut Process, args: Vec<String>) -> Result<()> {
     Ok(())
 }
 
+/// Display read user input and write to environmental variable.
 pub async fn read(process: &mut Process, args: Vec<String>) -> Result<()> {
     /// Write user input to a variable.
     #[derive(Parser)]

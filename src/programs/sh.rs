@@ -493,6 +493,7 @@ pub async fn sh(process: &mut Process) -> Result<()> {
             if (words.is_empty() || !section.ends_with(' '))
                 && (words.len() < 2 || words[words.len() - 2] == "|")
             {
+                // External(as in, not part of the shell) commands.
                 for path in bin_paths.clone() {
                     for command in path.read_dir()? {
                         let mut filename = command.filename();
@@ -500,6 +501,15 @@ pub async fn sh(process: &mut Process) -> Result<()> {
                             filename.push(' ');
                             suggestions.push(filename);
                         }
+                    }
+                }
+
+                // Shell commands
+                for command in shell_commands::COMMANDS {
+                    if command.starts_with(&section) {
+                        let mut command = String::from(command);
+                        command.push(' ');
+                        suggestions.push(command);
                     }
                 }
             } else {
