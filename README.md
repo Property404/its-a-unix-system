@@ -4,8 +4,9 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 
 ## Features
 
-* Essential UNIX commands (sh, ls, cp, mv, cat, cowsay, etc)
+* Essential Unix commands (sh, ls, cp, mv, cat, cowsay, etc)
 * Pipes and file redirect
+* Variables and subshells
 * File system via [rust-vfs](https://github.com/manuel-woelker/rust-vfs)
 * Basic scripting support (try `sh example.sh`)
 * Basic GNU Readline-like features (key bindings, history, tab-complete)
