@@ -24,6 +24,8 @@ const HISTORY_FILE: &str = "/etc/.sh_history";
 
 #[derive(Debug, PartialEq, Eq)]
 enum BasicToken {
+    And,
+    Or,
     Pipe,
     FileRedirectOut { append: bool },
     FileRedirectIn,
@@ -38,6 +40,8 @@ enum QuoteType {
 }
 
 enum Token {
+    And(Box<Token>, Box<Token>),
+    Or(Box<Token>, Box<Token>),
     Pipe(Box<Token>, Box<Token>),
     FileRedirectOut {
         lhs: Box<Token>,
@@ -54,9 +58,14 @@ enum Token {
 fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
     let mut root = Token::Command(Vec::new());
 
-    for basic in basic_tokens {
+    let mut basic_tokens = basic_tokens.into_iter();
+
+    while let Some(basic) = basic_tokens.next() {
         match basic {
             BasicToken::Value(value) => match &mut root {
+                Token::And(_, _) | Token::Or(_, _) => {
+                    unreachable!("Bug: &&/|| should not be accessible at this point");
+                }
                 Token::Pipe(_, subtoken) => match &mut **subtoken {
                     Token::Command(values) => {
                         values.push(value);
@@ -80,6 +89,14 @@ fn parse(basic_tokens: Vec<BasicToken>) -> Result<Token> {
                 }
                 Token::Command(values) => values.push(value),
             },
+            BasicToken::And => {
+                let rest = basic_tokens.collect();
+                return Ok(Token::And(Box::new(root), Box::new(parse(rest)?)));
+            }
+            BasicToken::Or => {
+                let rest = basic_tokens.collect();
+                return Ok(Token::Or(Box::new(root), Box::new(parse(rest)?)));
+            }
             BasicToken::Pipe => {
                 root = Token::Pipe(Box::new(root), Box::new(Token::Command(Vec::new())));
             }
@@ -212,14 +229,21 @@ async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>
                         // Extra 1 because we sub on beginning of loop
                         ignore_quotes = 1 + parse_variable(process, &mut source).await?;
                         continue;
-                    } else if ['|', '>', '<'].contains(&c) {
+                    } else if ['&', '|', '>', '<'].contains(&c) {
                         if !buffer.is_empty() {
                             tokens.push(BasicToken::Value(buffer.clone()));
                             buffer.clear();
                         }
 
                         if c == '|' {
-                            tokens.push(BasicToken::Pipe);
+                            if last_char == Some('|') {
+                                if !matches!(tokens.pop(), Some(BasicToken::Pipe)) {
+                                    bail!("Syntax error: Unexpected pipe");
+                                }
+                                tokens.push(BasicToken::Or);
+                            } else {
+                                tokens.push(BasicToken::Pipe);
+                            }
                         } else if c == '>' {
                             if last_char == Some('>') {
                                 if !matches!(
@@ -234,6 +258,11 @@ async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>
                             }
                         } else if c == '<' {
                             tokens.push(BasicToken::FileRedirectIn);
+                        } else if c == '&' {
+                            if source.next() != Some('&') {
+                                bail!("Syntax error: Background tasks not supported");
+                            }
+                            tokens.push(BasicToken::And);
                         }
                         continue;
                     }
@@ -330,6 +359,17 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                     },
                 }?;
 
+                Ok(())
+            }
+            Token::And(token1, token2) => {
+                dispatch(process, *token1).await?;
+                dispatch(process, *token2).await?;
+                Ok(())
+            }
+            Token::Or(token1, token2) => {
+                if dispatch(process, *token1).await.is_err() {
+                    dispatch(process, *token2).await?;
+                }
                 Ok(())
             }
             Token::FileRedirectOut { lhs, append, path } => {
@@ -491,7 +531,7 @@ pub async fn sh(process: &mut Process) -> Result<()> {
 
             // Commands occur at start of line, or after pipes
             if (words.is_empty() || !section.ends_with(' '))
-                && (words.len() < 2 || words[words.len() - 2] == "|")
+                && (words.len() < 2 || ["|", "&&", "||"].contains(&words[words.len() - 2]))
             {
                 // External(as in, not part of the shell) commands.
                 for path in bin_paths.clone() {
