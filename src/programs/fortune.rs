@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::{bail, Result};
 use clap::Parser;
 use rand::seq::SliceRandom;
@@ -19,7 +19,7 @@ struct Options {
     risque: bool,
 }
 
-pub async fn fortune(process: &mut Process) -> Result<()> {
+pub async fn fortune(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     // We keep a history of past fortunes so we don't repeat too often.
     let (fortunes_told, mut repeat_file) = {
@@ -67,6 +67,6 @@ pub async fn fortune(process: &mut Process) -> Result<()> {
         process.stdout.write_all(b"\n")?;
         repeat_file.write_all(fortune.as_bytes())?;
         repeat_file.write_all(b"\n")?;
-        return Ok(());
+        return Ok(ExitCode::SUCCESS);
     }
 }

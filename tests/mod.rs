@@ -94,7 +94,7 @@ async fn integration_test() -> Result<()> {
                 match command {
                     Command::Run(value) => {
                         shell.args = vec!["sh".into(), "-c".into(), value];
-                        programs::shell(&mut shell).await.unwrap()
+                        programs::shell(&mut shell).await.unwrap();
                     }
                     Command::Expect(value) => {
                         assert_eq!(value, stdout_rx.get_line().await?);

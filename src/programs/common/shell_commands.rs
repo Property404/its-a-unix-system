@@ -4,7 +4,7 @@
 //! itself.
 
 use crate::{
-    process::Process,
+    process::{ExitCode, Process},
     programs::common::readline::{NullHistory, Readline},
 };
 use anyhow::Result;
@@ -15,7 +15,7 @@ use futures::AsyncWriteExt;
 pub const COMMANDS: [&str; 3] = ["cd", "env", "read"];
 
 /// Change directory.
-pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<()> {
+pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
     /// Change directory.
     #[derive(Parser)]
     struct Options {
@@ -38,11 +38,11 @@ pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Display environmental variables.
-pub async fn env(process: &mut Process, args: Vec<String>) -> Result<()> {
+pub async fn env(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
     /// Display environmental variables.
     #[derive(Parser)]
     struct Options {}
@@ -55,11 +55,11 @@ pub async fn env(process: &mut Process, args: Vec<String>) -> Result<()> {
             .await?;
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
 
 /// Display read user input and write to environmental variable.
-pub async fn read(process: &mut Process, args: Vec<String>) -> Result<()> {
+pub async fn read(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
     /// Write user input to a variable.
     #[derive(Parser)]
     struct Options {
@@ -81,5 +81,5 @@ pub async fn read(process: &mut Process, args: Vec<String>) -> Result<()> {
         .await?;
     process.env.insert(options.variable, line);
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

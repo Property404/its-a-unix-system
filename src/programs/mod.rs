@@ -6,7 +6,7 @@ mod common;
 pub use sh::sh as shell;
 
 // Run a program from '/bin' or somewhere.
-async fn exec_external_program(process: &mut Process) -> Result<Option<Result<()>>> {
+async fn exec_external_program(process: &mut Process) -> Result<Option<Result<ExitCode>>> {
     let command = process.args[0].clone();
     let mut run_command = false;
 
@@ -59,7 +59,7 @@ macro_rules! implement {
 
             Ok(match result {
                 None => None,
-                Some(Ok(())) => Some(ExitCode::SUCCESS),
+                Some(Ok(code)) => Some(code),
                 Some(Err(e)) => {
                     process.stderr.write_all(command.as_bytes())?;
                     process.stderr.write_all(b": ")?;

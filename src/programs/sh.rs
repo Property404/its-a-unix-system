@@ -320,14 +320,15 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                 }
                 let command = args[0].clone();
                 if command == "cd" {
-                    shell_commands::cd(process, args).await?;
-                    Ok(ExitCode::SUCCESS)
+                    shell_commands::cd(process, args).await
                 } else if command == "env" {
-                    shell_commands::env(process, args).await?;
-                    Ok(ExitCode::SUCCESS)
+                    shell_commands::env(process, args).await
                 } else if command == "read" {
-                    shell_commands::read(process, args).await?;
+                    shell_commands::read(process, args).await
+                } else if command == "true" {
                     Ok(ExitCode::SUCCESS)
+                } else if command == "false" {
+                    Ok(ExitCode::FAILURE)
                 } else {
                     let mut process = process.clone();
                     process.args = args.clone();
@@ -466,8 +467,12 @@ async fn await_abortable_future<T, F: Future<Output = Result<T>>>(
     result
 }
 
-pub fn run_script<'a>(process: &'a mut Process, source: &'a str) -> BoxFuture<'a, Result<()>> {
+pub fn run_script<'a>(
+    process: &'a mut Process,
+    source: &'a str,
+) -> BoxFuture<'a, Result<ExitCode>> {
     async {
+        let mut result = ExitCode::SUCCESS;
         let lines = source.split('\n');
         for line in lines {
             if line.trim().is_empty() {
@@ -481,9 +486,10 @@ pub fn run_script<'a>(process: &'a mut Process, source: &'a str) -> BoxFuture<'a
 
             let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
             process.signal_registrar.unbounded_send(abort_channel_tx)?;
-            await_abortable_future(abort_channel_rx, dispatch(process, root_token)).await?;
+            result =
+                await_abortable_future(abort_channel_rx, dispatch(process, root_token)).await?;
         }
-        Ok(())
+        Ok(result)
     }
     .boxed()
 }
@@ -497,7 +503,7 @@ struct Options {
     script: Option<String>,
 }
 
-pub async fn sh(process: &mut Process) -> Result<()> {
+pub async fn sh(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
 
     let mut stdout = process.stdout.clone();
@@ -514,12 +520,12 @@ pub async fn sh(process: &mut Process) -> Result<()> {
         process.args = process.args.iter().skip(1).cloned().collect();
 
         run_script(&mut process, &script).await?;
-        return Ok(());
+        return Ok(ExitCode::SUCCESS);
     }
 
     if let Some(command) = options.command {
         run_script(process, &command).await?;
-        return Ok(());
+        return Ok(ExitCode::SUCCESS);
     }
 
     let readline_history = FileBasedHistory::new(process.get_path(HISTORY_FILE)?);

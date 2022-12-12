@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::{bail, Result};
 use clap::Parser;
 use std::io::Write;
@@ -10,7 +10,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn cat(process: &mut Process) -> Result<()> {
+pub async fn cat(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     if options.files.is_empty() {
         loop {
@@ -19,7 +19,7 @@ pub async fn cat(process: &mut Process) -> Result<()> {
                 process.stdout.write_all(b"\n")?;
             } else {
                 // Ignore 'unexpected end of file'
-                return Ok(());
+                return Ok(ExitCode::Success);
             }
         }
     }
@@ -39,5 +39,5 @@ pub async fn cat(process: &mut Process) -> Result<()> {
         process.stdout.write_all(contents.as_bytes())?
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

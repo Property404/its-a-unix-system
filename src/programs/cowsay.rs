@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::Result;
 use clap::Parser;
 use futures::io::AsyncReadExt;
@@ -13,7 +13,7 @@ struct Options {
     args: Vec<String>,
 }
 
-pub async fn cowsay(process: &mut Process) -> Result<()> {
+pub async fn cowsay(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let text = if options.args.is_empty() {
         let mut text = String::new();
@@ -81,5 +81,5 @@ pub async fn cowsay(process: &mut Process) -> Result<()> {
                   ||     ||
 ",
     )?;
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use crate::programs::common::color_picker::{Color, ColorPicker};
 use anyhow::{bail, Result};
 use clap::Parser;
@@ -15,7 +15,7 @@ struct Options {
     target: Option<String>,
 }
 
-pub async fn ls(process: &mut Process) -> Result<()> {
+pub async fn ls(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let path = {
         let dir = process.get_path(options.target.unwrap_or_else(|| ".".into()))?;
@@ -47,5 +47,5 @@ pub async fn ls(process: &mut Process) -> Result<()> {
             picker.write(&mut process.stdout, &display)?;
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

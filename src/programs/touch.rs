@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::Result;
 use clap::Parser;
 use futures::io::AsyncWriteExt;
@@ -11,7 +11,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn touch(process: &mut Process) -> Result<()> {
+pub async fn touch(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     for arg in options.files.into_iter() {
         if arg == "me" {
@@ -19,5 +19,5 @@ pub async fn touch(process: &mut Process) -> Result<()> {
         }
         process.get_path(arg)?.create_file()?;
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

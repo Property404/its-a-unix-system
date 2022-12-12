@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::Result;
 use clap::Parser;
 use futures::io::AsyncWriteExt;
@@ -13,7 +13,7 @@ struct Options {
     args: Vec<String>,
 }
 
-pub async fn echo(process: &mut Process) -> Result<()> {
+pub async fn echo(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let mut args = options.args.into_iter();
     let mut ends_with_line_feed = false;
@@ -35,5 +35,5 @@ pub async fn echo(process: &mut Process) -> Result<()> {
         process.stdout.write_all(b"\n").await?;
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

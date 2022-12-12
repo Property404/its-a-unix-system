@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::{bail, Result};
 use clap::Parser;
 use futures::AsyncReadExt;
@@ -11,7 +11,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn sort(process: &mut Process) -> Result<()> {
+pub async fn sort(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let mut contents = String::new();
 
@@ -39,5 +39,5 @@ pub async fn sort(process: &mut Process) -> Result<()> {
         process.stdout.write_all(b"\n")?;
     }
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

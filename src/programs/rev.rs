@@ -1,5 +1,5 @@
 use crate::{
-    process::Process,
+    process::{ExitCode, Process},
     streams::{file_redirect_in, InputStream, OutputStream},
 };
 use anyhow::Result;
@@ -23,7 +23,7 @@ pub async fn rev_inner(stream: &mut InputStream, out: &mut OutputStream) -> Resu
     Ok(())
 }
 
-pub async fn rev(process: &mut Process) -> Result<()> {
+pub async fn rev(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
 
     if options.files.is_empty() {
@@ -43,5 +43,5 @@ pub async fn rev(process: &mut Process) -> Result<()> {
             }?;
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

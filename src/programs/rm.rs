@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::{bail, Result};
 use clap::Parser;
 
@@ -16,7 +16,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn rm(process: &mut Process) -> Result<()> {
+pub async fn rm(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
 
     for file in options.files {
@@ -31,5 +31,5 @@ pub async fn rm(process: &mut Process) -> Result<()> {
             result?
         }
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

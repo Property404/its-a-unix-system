@@ -1,4 +1,7 @@
-use crate::{process::Process, streams::file_redirect_out};
+use crate::{
+    process::{ExitCode, Process},
+    streams::file_redirect_out,
+};
 use anyhow::Result;
 use clap::Parser;
 use futures::{future::try_join_all, try_join};
@@ -11,7 +14,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn tee(process: &mut Process) -> Result<()> {
+pub async fn tee(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let mut outs = Vec::new();
     let mut backends = Vec::new();
@@ -48,5 +51,5 @@ pub async fn tee(process: &mut Process) -> Result<()> {
         }
     }?;
 
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

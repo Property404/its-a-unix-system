@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::{bail, Result};
 use clap::Parser;
 
@@ -11,7 +11,7 @@ struct Options {
     dest: String,
 }
 
-pub async fn cp(process: &mut Process) -> Result<()> {
+pub async fn cp(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let src = process.get_path(&options.src)?;
     if !src.exists()? {
@@ -27,5 +27,5 @@ pub async fn cp(process: &mut Process) -> Result<()> {
         dest.remove_file()?;
     }
     src.copy_file(&dest)?;
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

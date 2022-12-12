@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::Result;
 use clap::Parser;
 use futures::io::AsyncReadExt;
@@ -11,7 +11,7 @@ struct Options {
     file: String,
 }
 
-pub async fn sponge(process: &mut Process) -> Result<()> {
+pub async fn sponge(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let mut content = String::new();
 
@@ -20,5 +20,5 @@ pub async fn sponge(process: &mut Process) -> Result<()> {
     let path = process.get_path(options.file)?;
     let mut file = path.create_file()?;
     file.write_all(content.as_bytes())?;
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }

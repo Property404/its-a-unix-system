@@ -1,4 +1,4 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::Result;
 use clap::Parser;
 
@@ -10,10 +10,10 @@ struct Options {
     directories: Vec<String>,
 }
 
-pub async fn mkdir(process: &mut Process) -> Result<()> {
+pub async fn mkdir(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     for arg in options.directories.into_iter() {
         process.get_path(arg)?.create_dir_all()?;
     }
-    Ok(())
+    Ok(ExitCode::SUCCESS)
 }
