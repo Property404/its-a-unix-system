@@ -1,5 +1,5 @@
 use crate::{
-    process::Process,
+    process::{ExitCode, Process},
     programs::common::{
         extendable_iterator::ExtendableIterator,
         readline::{FileBasedHistory, Readline},
@@ -311,7 +311,7 @@ async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>
     Ok(tokens)
 }
 
-fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
+fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
     async move {
         match root {
             Token::Command(args) => {
@@ -321,21 +321,27 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                 let command = args[0].clone();
                 if command == "cd" {
                     shell_commands::cd(process, args).await?;
+                    Ok(ExitCode::SUCCESS)
                 } else if command == "env" {
                     shell_commands::env(process, args).await?;
+                    Ok(ExitCode::SUCCESS)
                 } else if command == "read" {
                     shell_commands::read(process, args).await?;
+                    Ok(ExitCode::SUCCESS)
                 } else {
                     let mut process = process.clone();
                     process.args = args.clone();
-                    if crate::programs::get_program(&mut process, args)
-                        .await?
-                        .is_none()
-                    {
-                        bail!("Command not found: {command}");
+                    match crate::programs::get_program(&mut process, args).await? {
+                        None => {
+                            process
+                                .stderr
+                                .write_all(format!("Command not found: {command}\n").as_bytes())
+                                .await?;
+                            Ok(ExitCode::FAILURE)
+                        }
+                        Some(code) => Ok(code),
                     }
                 }
-                Ok(())
             }
             Token::Pipe(token1, token2) => {
                 let (mut pin, pout, mut backend) = streams::pipe();
@@ -345,32 +351,37 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                 let mut process2 = process.clone();
                 process2.stdin = pin.clone();
 
-                try_join! {
+                let (_, _, result) = try_join! {
                     backend.run(),
                     async {
-                        dispatch(&mut process1, *token1).await?;
+                        let result = dispatch(&mut process1, *token1).await;
                         pout.shutdown().await?;
-                        Ok(())
+                        result
                     },
                     async {
-                        dispatch(&mut process2, *token2).await?;
+                        let result = dispatch(&mut process2, *token2).await;
                         pin.shutdown().await?;
-                        Ok(())
+                        result
                     },
                 }?;
 
-                Ok(())
+                Ok(result)
             }
             Token::And(token1, token2) => {
-                dispatch(process, *token1).await?;
-                dispatch(process, *token2).await?;
-                Ok(())
+                let result = dispatch(process, *token1).await?;
+                if result.is_success() {
+                    dispatch(process, *token2).await
+                } else {
+                    Ok(result)
+                }
             }
             Token::Or(token1, token2) => {
-                if dispatch(process, *token1).await.is_err() {
-                    dispatch(process, *token2).await?;
+                let result = dispatch(process, *token1).await?;
+                if result.is_failure() {
+                    dispatch(process, *token2).await
+                } else {
+                    Ok(result)
                 }
-                Ok(())
             }
             Token::FileRedirectOut { lhs, append, path } => {
                 let (pout, mut backend) = {
@@ -387,16 +398,16 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                 let mut child_process = process.clone();
                 child_process.stdout = pout.clone();
 
-                try_join! {
+                let (_, result) = try_join! {
                     backend.run(),
                     async {
-                        dispatch(&mut child_process, *lhs).await?;
+                        let result = dispatch(&mut child_process, *lhs).await;
                         pout.shutdown().await?;
-                        Ok(())
+                        result
                     },
                 }?;
 
-                Ok(())
+                Ok(result)
             }
             Token::FileRedirectIn { lhs, path } => {
                 let (mut pin, mut backend) = {
@@ -408,16 +419,16 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<()>> {
                 let mut child_process = process.clone();
                 child_process.stdin = pin.clone();
 
-                try_join! {
+                let (_, result) = try_join! {
                     backend.run(),
                     async {
-                        dispatch(&mut child_process, *lhs).await?;
+                        let result =  dispatch(&mut child_process, *lhs).await;
                         pin.shutdown().await?;
-                        Ok(())
+                        result
                     },
                 }?;
 
-                Ok(())
+                Ok(result)
             }
         }
     }

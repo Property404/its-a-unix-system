@@ -1,7 +1,7 @@
 use crate::streams::{InputStream, OutputStream};
 use anyhow::Result;
 use futures::channel::{mpsc::UnboundedSender, oneshot};
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZeroU8};
 use vfs::VfsPath;
 
 #[derive(Clone)]
@@ -28,5 +28,27 @@ impl Process {
         }
 
         Ok(self.cwd.join(path)?)
+    }
+}
+
+/// Value returned from a Process.
+#[derive(Copy, Clone)]
+pub enum ExitCode {
+    Success,
+    Failure(NonZeroU8),
+}
+
+impl ExitCode {
+    pub const FAILURE: Self = unsafe { ExitCode::Failure(NonZeroU8::new_unchecked(1)) };
+    pub const SUCCESS: Self = ExitCode::Success;
+
+    /// Returns true if this is a succcess variant.
+    pub const fn is_success(&self) -> bool {
+        matches!(self, ExitCode::Success)
+    }
+
+    /// Returns true if this is a failure variant.
+    pub const fn is_failure(&self) -> bool {
+        matches!(self, ExitCode::Failure(_))
     }
 }

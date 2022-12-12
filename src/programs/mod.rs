@@ -1,6 +1,6 @@
-use crate::process::Process;
+use crate::process::{ExitCode, Process};
 use anyhow::{anyhow, bail, Result};
-use std::{io::Write, process::ExitCode};
+use std::io::Write;
 mod common;
 
 pub use sh::sh as shell;
