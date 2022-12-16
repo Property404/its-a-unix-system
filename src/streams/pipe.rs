@@ -1,5 +1,5 @@
 use crate::streams::{Backend, InputStream, OutputStream, TerminalReader, TerminalWriter};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use futures::{
     channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
     stream::{FusedStream, Stream},
@@ -29,7 +29,9 @@ pub struct PipeWriter {
 
 impl TerminalWriter for PipeWriter {
     fn send(&mut self, content: &str) -> Result<()> {
-        self.tx.unbounded_send(content.as_bytes().to_vec())?;
+        self.tx
+            .unbounded_send(content.as_bytes().to_vec())
+            .map_err(|_| anyhow!("Broken pipe"))?;
         Ok(())
     }
     fn shutdown(&mut self) -> Result<()> {
@@ -42,7 +44,12 @@ pub struct PipeReader {
     stream: UnboundedReceiver<Vec<u8>>,
 }
 
-impl TerminalReader for PipeReader {}
+impl TerminalReader for PipeReader {
+    fn shutdown(&mut self) -> Result<()> {
+        self.stream.close();
+        Ok(())
+    }
+}
 
 impl Stream for PipeReader {
     type Item = Vec<u8>;

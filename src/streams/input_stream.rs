@@ -25,6 +25,11 @@ pub trait TerminalReader: Sized + FusedStream<Item = Vec<u8>> + Unpin {
         let _ = ready_tx.send(());
         Ok(())
     }
+
+    /// Shut down the stream.
+    fn shutdown(&mut self) -> Result<()> {
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq)]
@@ -61,6 +66,7 @@ impl<T: TerminalReader> InputStreamBackend<T> {
                 let command = command.expect("End of command stream reached!");
                 match command {
                     InputCommand::Shutdown(signal) => {
+                        self.reader.shutdown()?;
                         signal.send(()).expect("Could not send shutdown signal");
                         return Ok(ControlFlow::Break(()));
                     },
