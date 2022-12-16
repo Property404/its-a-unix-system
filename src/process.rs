@@ -32,8 +32,9 @@ impl Process {
 }
 
 /// Value returned from a Process.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Default)]
 pub enum ExitCode {
+    #[default]
     Success,
     Failure(NonZeroU8),
 }
