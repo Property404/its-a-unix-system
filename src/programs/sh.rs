@@ -22,6 +22,27 @@ use vfs::VfsPath;
 
 const HISTORY_FILE: &str = "/etc/.sh_history";
 
+enum AbortableResult<T> {
+    Completed(Result<T>),
+    Aborted,
+}
+
+impl<T> AbortableResult<T> {
+    fn fail_if_aborted(self) -> Result<T> {
+        match self {
+            AbortableResult::Completed(result) => result,
+            AbortableResult::Aborted => bail!("INTERRUPT"),
+        }
+    }
+
+    fn completed_or(self, value: Result<T>) -> Result<T> {
+        match self {
+            AbortableResult::Completed(result) => result,
+            AbortableResult::Aborted => value,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum BasicToken {
     And,
@@ -156,7 +177,9 @@ async fn parse_variable(process: &Process, source: &mut ExtendableIterator<char>
                 };
                 output
             };
-            let output = await_abortable_future(abort_channel_rx, future).await?;
+            let output = await_abortable_future(abort_channel_rx, future)
+                .await
+                .fail_if_aborted()?;
 
             source.prepend(output.chars());
             return Ok(output.len());
@@ -352,15 +375,27 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                 let mut process2 = process.clone();
                 process2.stdin = pin.clone();
 
+                // Prevent Broken Pipe errors.
+                let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
+                let (meta_abort_channel_tx, meta_abort_channel_rx) = oneshot::channel::<()>();
+
                 let (_, _, result) = try_join! {
                     backend.run(),
                     async {
-                        let result = dispatch(&mut process1, *token1).await;
+                        let result = await_abortable_future(
+                            abort_channel_rx,
+                            dispatch(&mut process1, *token1))
+                            .await.completed_or(Ok(ExitCode::FAILURE));
+                        let _ = meta_abort_channel_tx.send(());
                         pout.shutdown().await?;
                         result
                     },
                     async {
                         let result = dispatch(&mut process2, *token2).await;
+                        let _ = abort_channel_tx.send(());
+                        // give a chance for the sibling to be aborted before
+                        // shutting down the input stream
+                        meta_abort_channel_rx.await?;
                         pin.shutdown().await?;
                         result
                     },
@@ -423,7 +458,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                 let (_, result) = try_join! {
                     backend.run(),
                     async {
-                        let result =  dispatch(&mut child_process, *lhs).await;
+                        let result = dispatch(&mut child_process, *lhs).await;
                         pin.shutdown().await?;
                         result
                     },
@@ -439,7 +474,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
 async fn await_abortable_future<T, F: Future<Output = Result<T>>>(
     mut abort_channel_rx: oneshot::Receiver<()>,
     future: F,
-) -> Result<T> {
+) -> AbortableResult<T> {
     let (meta_abort_channel_tx, mut meta_abort_channel_rx) = oneshot::channel::<()>();
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     let future = Abortable::new(future, abort_registration);
@@ -455,9 +490,9 @@ async fn await_abortable_future<T, F: Future<Output = Result<T>>>(
         },
         async {
             let result = match future.await {
-                Ok(inner) => inner,
+                Ok(inner) => AbortableResult::Completed(inner),
                 Err(_) =>  {
-                    Err(anyhow!("INTERRUPT"))?
+                    AbortableResult::Aborted
                 }
             };
             let _ = meta_abort_channel_tx.send(());
@@ -486,8 +521,10 @@ pub fn run_script<'a>(
 
             let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
             process.signal_registrar.unbounded_send(abort_channel_tx)?;
-            result =
-                await_abortable_future(abort_channel_rx, dispatch(process, root_token)).await?;
+
+            result = await_abortable_future(abort_channel_rx, dispatch(process, root_token))
+                .await
+                .fail_if_aborted()?;
         }
         Ok(result)
     }
@@ -601,11 +638,15 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
         )
         .await
         {
-            Ok(line) => line,
-            Err(e) => {
+            AbortableResult::Completed(Ok(line)) => line,
+            AbortableResult::Completed(Err(e)) => {
                 process.stderr.write_all(b"\nreadline: ").await?;
                 process.stderr.write_all(e.to_string().as_bytes()).await?;
                 process.stderr.write_all(b"\n").await?;
+                continue;
+            }
+            AbortableResult::Aborted => {
+                process.stdout.write_all(b"\n").await?;
                 continue;
             }
         };
