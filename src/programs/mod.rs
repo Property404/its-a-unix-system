@@ -6,9 +6,10 @@ mod common;
 pub use sh::sh as shell;
 
 // Run a program from '/bin' or somewhere.
-async fn exec_external_program(process: &mut Process) -> Result<Option<Result<ExitCode>>> {
-    let command = process.args[0].clone();
-
+async fn exec_external_program(
+    process: &mut Process,
+    command: &str,
+) -> Result<Option<Result<ExitCode>>> {
     let root = process.cwd.root();
     let paths = process
         .env
@@ -17,11 +18,11 @@ async fn exec_external_program(process: &mut Process) -> Result<Option<Result<Ex
         .split(':')
         .map(|path| root.join(path));
 
-    let mut contents = String::new();
     for path in paths {
         let path = path?;
         for entity in path.read_dir()? {
             if entity.is_file()? && entity.filename() == command {
+                let mut contents = String::new();
                 entity.open_file()?.read_to_string(&mut contents)?;
                 return Ok(Some(sh::run_script(process, &contents).await));
             }
@@ -43,7 +44,7 @@ macro_rules! implement {
                 } else
             )*
             {
-                exec_external_program(process).await?
+                exec_external_program(process, command).await?
             };
 
             Ok(match result {
