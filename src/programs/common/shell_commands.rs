@@ -15,7 +15,7 @@ use clap::Parser;
 use futures::AsyncWriteExt;
 
 /// List of all internal shell commands.
-pub const COMMANDS: [&str; 3] = ["cd", "env", "read"];
+pub const COMMANDS: [&str; 5] = ["cd", "env", "read", "exit", "exec"];
 
 /// Exit shell.
 pub async fn exit(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
