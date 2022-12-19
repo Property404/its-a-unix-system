@@ -11,7 +11,8 @@ use futures::{io::AsyncWriteExt, try_join};
 use process::Process;
 use wasm_bindgen::prelude::*;
 
-const DEFAULT_SEARCH_PATHS: [&str; 2] = ["bin", "usr/bin"];
+const HOME_PATH: &str = "/root";
+const DEFAULT_SEARCH_PATHS: [&str; 2] = ["/bin", "/usr/bin"];
 
 async fn run() -> Result<()> {
     utils::set_panic_hook();
@@ -25,7 +26,7 @@ async fn run() -> Result<()> {
         stderr: stdout.clone(),
         env: Default::default(),
         signal_registrar,
-        cwd: rootfs,
+        cwd: rootfs.join(HOME_PATH)?,
         args: vec!["-sh".into()],
         do_exit_with: None,
     };
