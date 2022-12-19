@@ -346,6 +346,8 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                     shell_commands::cd(process, args).await
                 } else if command == "env" {
                     shell_commands::env(process, args).await
+                } else if command == "exit" {
+                    shell_commands::exit(process, args).await
                 } else if command == "read" {
                     shell_commands::read(process, args).await
                 } else if command == "true" {
@@ -525,6 +527,9 @@ pub fn run_script<'a>(
             result = await_abortable_future(abort_channel_rx, dispatch(process, root_token))
                 .await
                 .fail_if_aborted()?;
+            if let Some(exit_code) = process.do_exit_with {
+                return Ok(exit_code)
+            }
         }
         Ok(result)
     }
@@ -657,6 +662,10 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
         if let Err(e) = run_script(process, &line).await {
             process.stderr.write_all(e.to_string().as_bytes()).await?;
             process.stderr.write_all(b"\n").await?;
+        }
+
+        if let Some(exit_code) = process.do_exit_with {
+            return Ok(exit_code)
         }
     }
 }

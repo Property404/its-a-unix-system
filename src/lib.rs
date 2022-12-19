@@ -27,6 +27,7 @@ async fn run() -> Result<()> {
         signal_registrar,
         cwd: rootfs,
         args: vec!["-sh".into()],
+        do_exit_with: None,
     };
     shell
         .env

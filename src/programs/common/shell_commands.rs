@@ -14,6 +14,17 @@ use futures::AsyncWriteExt;
 /// List of all internal shell commands.
 pub const COMMANDS: [&str; 3] = ["cd", "env", "read"];
 
+/// Exit shell.
+pub async fn exit(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+    /// Exit shell.
+    #[derive(Parser)]
+    struct Options {}
+    let _options = Options::try_parse_from(args.iter())?;
+    let code = ExitCode::SUCCESS;
+    process.do_exit_with = Some(code);
+    Ok(code)
+}
+
 /// Change directory.
 pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
     /// Change directory.
