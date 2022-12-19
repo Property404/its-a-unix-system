@@ -7,7 +7,7 @@ pub mod streams;
 mod utils;
 use ansi_codes::{AnsiCode, ControlChar};
 use anyhow::Result;
-use futures::try_join;
+use futures::{io::AsyncWriteExt, try_join};
 use process::Process;
 use wasm_bindgen::prelude::*;
 
@@ -16,10 +16,10 @@ const DEFAULT_SEARCH_PATHS: [&str; 2] = ["bin", "usr/bin"];
 async fn run() -> Result<()> {
     utils::set_panic_hook();
 
-    let (mut stdin, stdout, mut backend, signal_registrar) = streams::standard()?;
+    let (stdin, stdout, mut backend, signal_registrar) = streams::standard()?;
 
     let rootfs = filesystem::get_root()?;
-    let mut shell = Process {
+    let mut process = Process {
         stdin: stdin.clone(),
         stdout: stdout.clone(),
         stderr: stdout.clone(),
@@ -29,15 +29,25 @@ async fn run() -> Result<()> {
         args: vec!["-sh".into()],
         do_exit_with: None,
     };
-    shell
+    process
         .env
         .insert("PATH".into(), DEFAULT_SEARCH_PATHS.join(":"));
 
     try_join!(backend.run(), async {
-        programs::shell(&mut shell).await?;
-        // Could be concurrent
-        stdout.shutdown().await?;
-        stdin.shutdown().await?;
+        loop {
+            let mut child = process.clone();
+            programs::exec_program(&mut child, "sh").await?;
+            process
+                .stderr
+                .write_all(b"Oops! Looks like you exited your shell.\n")
+                .await?;
+            process
+                .stderr
+                .write_all(b"Let me get a fresh one for you.\n")
+                .await?;
+        }
+        // So return type can be inferred.
+        #[allow(unreachable_code)]
         Ok(())
     })?;
     Ok(())
