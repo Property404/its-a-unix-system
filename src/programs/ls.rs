@@ -30,7 +30,7 @@ pub async fn ls(process: &mut Process) -> Result<ExitCode> {
 
     let mut picker = ColorPicker::new(process.stdout.to_terminal().await?);
 
-    // Show '.' and '..', because those don't appear in walk_dir()
+    // Show '.' and '..', because those don't appear in read_dir()
     if options.all {
         picker.set_color(DIR_COLOR);
         picker.write(&mut process.stdout, ".\n..\n")?;
