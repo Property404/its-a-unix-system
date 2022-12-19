@@ -85,7 +85,7 @@ impl<T: TerminalReader> InputStreamBackend<T> {
         loop {
             match self.run_inner().await {
                 Err(e) => {
-                    crate::utils::debug(format!("[Internal error:{}]", e));
+                    crate::utils::debug(format!("[Internal error:{e}]"));
                 }
                 Ok(ControlFlow::Break(())) => {
                     break;
