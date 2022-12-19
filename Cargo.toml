@@ -2,7 +2,7 @@
 name = "faux-unix-system"
 description = "A unix terminal for your website"
 version = "0.1.0"
-authors = ["Property404 <dagan@dagans.dev>"]
+authors = ["Property404 <git@dagans.dev>"]
 edition = "2021"
 repository = "https://github.com/Property404/its-a-unix-system"
 license = "MIT"
