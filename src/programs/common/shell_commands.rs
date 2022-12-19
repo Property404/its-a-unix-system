@@ -5,9 +5,12 @@
 
 use crate::{
     process::{ExitCode, Process},
-    programs::common::readline::{NullHistory, Readline},
+    programs::{
+        self,
+        common::readline::{NullHistory, Readline},
+    },
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::Parser;
 use futures::AsyncWriteExt;
 
@@ -21,6 +24,35 @@ pub async fn exit(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
     struct Options {}
     let _options = Options::try_parse_from(args.iter())?;
     let code = ExitCode::SUCCESS;
+    process.do_exit_with = Some(code);
+    Ok(code)
+}
+
+pub async fn exec(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+    /// Replace shell with program.
+    #[derive(Parser)]
+    struct Options {
+        /// The program to run.
+        command: String,
+        /// Pass name as zeroth argument.
+        #[arg(short = 'a')]
+        name: Option<String>,
+        /// The arguments to pass, starting with argv[1].
+        args: Vec<String>,
+    }
+    let options = Options::try_parse_from(args.iter())?;
+
+    if let Some(name) = options.name {
+        process.args = vec![name];
+    } else {
+        process.args = vec![options.command.clone()];
+    }
+    process.args.extend(options.args);
+
+    let Some(code) = programs::get_program(process, vec![options.command.clone()]).await? else {
+        bail!("Cannot find {}", options.command);
+    };
+
     process.do_exit_with = Some(code);
     Ok(code)
 }

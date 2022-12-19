@@ -346,6 +346,8 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                     shell_commands::cd(process, args).await
                 } else if command == "env" {
                     shell_commands::env(process, args).await
+                } else if command == "exec" {
+                    shell_commands::exec(process, args).await
                 } else if command == "exit" {
                     shell_commands::exit(process, args).await
                 } else if command == "read" {
