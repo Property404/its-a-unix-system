@@ -49,7 +49,7 @@ pub async fn exec(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
     }
     process.args.extend(options.args);
 
-    let Some(code) = programs::get_program(process, vec![options.command.clone()]).await? else {
+    let Some(code) = programs::exec_program(process, &options.command).await? else {
         bail!("Cannot find {}", options.command);
     };
 

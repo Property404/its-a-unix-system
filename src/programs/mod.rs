@@ -1,5 +1,5 @@
 use crate::process::{ExitCode, Process};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, Result};
 use std::io::Write;
 mod common;
 
@@ -42,12 +42,7 @@ macro_rules! implement {
         $(
             mod $cmd;
         )*
-        pub async fn get_program(process: &mut Process, args: Vec<String>) -> Result<Option<ExitCode>> {
-            if args.is_empty() {
-                bail!("At least one argument is required to execute a program");
-            }
-            // could be ref
-            let command = args[0].clone();
+        pub async fn exec_program(process: &mut Process, command: &str) -> Result<Option<ExitCode>> {
             let result = $(
                 if command == stringify!($cmd) {
                     Some($cmd::$cmd(process).await)

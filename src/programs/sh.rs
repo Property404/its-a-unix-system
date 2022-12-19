@@ -359,7 +359,7 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                 } else {
                     let mut process = process.clone();
                     process.args = args.clone();
-                    match crate::programs::get_program(&mut process, args).await? {
+                    match crate::programs::exec_program(&mut process, &command).await? {
                         None => {
                             process
                                 .stderr
