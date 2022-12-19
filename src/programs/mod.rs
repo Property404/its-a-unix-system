@@ -8,7 +8,6 @@ pub use sh::sh as shell;
 // Run a program from '/bin' or somewhere.
 async fn exec_external_program(process: &mut Process) -> Result<Option<Result<ExitCode>>> {
     let command = process.args[0].clone();
-    let mut run_command = false;
 
     let root = process.cwd.root();
     let paths = process
@@ -24,17 +23,12 @@ async fn exec_external_program(process: &mut Process) -> Result<Option<Result<Ex
         for entity in path.read_dir()? {
             if entity.is_file()? && entity.filename() == command {
                 entity.open_file()?.read_to_string(&mut contents)?;
-                run_command = true;
+                return Ok(Some(sh::run_script(process, &contents).await));
             }
         }
     }
 
-    //  Necessary to do it this way because VfsPath::walk_dir() does not return a Sync object
-    if run_command {
-        Ok(Some(sh::run_script(process, &contents).await))
-    } else {
-        Ok(None)
-    }
+    Ok(None)
 }
 
 macro_rules! implement {
