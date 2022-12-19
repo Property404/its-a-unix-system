@@ -689,6 +689,7 @@ mod test {
             stdout,
             signal_registrar,
             cwd,
+            do_exit_with: None,
             args: Vec::new(),
             env: Default::default(),
         }
