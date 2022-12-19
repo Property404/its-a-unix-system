@@ -14,7 +14,21 @@ struct Options {
 }
 
 pub async fn test(process: &mut Process) -> Result<ExitCode> {
-    let options = Options::try_parse_from(process.args.iter())?;
+    if process.args.is_empty() {
+        bail!("No arguments");
+    }
+
+    // If we're aliased with '[', then end with ']'
+    let args = if process.args[0] == "[" {
+        if process.args.last().expect("No last item") != "]" {
+            bail!("Expected ']'");
+        }
+        &process.args[0..process.args.len()-1]
+    } else {
+        &process.args[..]
+    };
+
+    let options = Options::try_parse_from(args)?;
 
     let result = match options.op.as_str() {
         // Equal
