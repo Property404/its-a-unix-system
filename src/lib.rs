@@ -12,7 +12,7 @@ use process::Process;
 use wasm_bindgen::prelude::*;
 
 const HOME_PATH: &str = "/root";
-const DEFAULT_SEARCH_PATHS: [&str; 2] = ["/bin", "/usr/bin"];
+const DEFAULT_SEARCH_PATHS: &str = "/bin:/usr/bin";
 
 async fn run() -> Result<()> {
     utils::set_panic_hook();
@@ -30,9 +30,10 @@ async fn run() -> Result<()> {
         args: vec!["-sh".into()],
         do_exit_with: None,
     };
-    process
-        .env
-        .insert("PATH".into(), DEFAULT_SEARCH_PATHS.join(":"));
+
+    for (key, value) in [("PATH", DEFAULT_SEARCH_PATHS), ("HOME", HOME_PATH)] {
+        process.env.insert(key.into(), value.into());
+    }
 
     try_join!(backend.run(), async {
         loop {
