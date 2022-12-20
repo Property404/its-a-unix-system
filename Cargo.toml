@@ -14,9 +14,9 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-anyhow = "1.0.66"
+anyhow = "1.0.68"
 ascii = "1.1.0"
-clap = { version = "4.0.27", features = ["derive", "std", "help", "usage", "suggestions"], default-features = false }
+clap = { version = "4.0.29", features = ["derive", "std", "help", "usage", "suggestions"], default-features = false }
 console_error_panic_hook = { version = "0.1.7", optional = true }
 futures = "0.3.25"
 getrandom = { version = "0.2.8", features = ["js"] }
@@ -30,7 +30,7 @@ wasm-bindgen-futures = { version = "0.4.33", features = ["futures-core", "future
 web-sys = { version = "0.3.60", features = ["Document", "Window", "KeyboardEvent"] }
 
 [build-dependencies]
-anyhow = "1.0.66"
+anyhow = "1.0.68"
 walkdir = "2.3.2"
 
 [dev-dependencies]
