@@ -23,7 +23,7 @@ pub async fn test(process: &mut Process) -> Result<ExitCode> {
         if process.args.last().expect("No last item") != "]" {
             bail!("Expected ']'");
         }
-        &process.args[0..process.args.len()-1]
+        &process.args[0..process.args.len() - 1]
     } else {
         &process.args[..]
     };

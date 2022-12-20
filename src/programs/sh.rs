@@ -530,7 +530,7 @@ pub fn run_script<'a>(
                 .await
                 .fail_if_aborted()?;
             if let Some(exit_code) = process.do_exit_with {
-                return Ok(exit_code)
+                return Ok(exit_code);
             }
         }
         Ok(result)
@@ -667,7 +667,7 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
         }
 
         if let Some(exit_code) = process.do_exit_with {
-            return Ok(exit_code)
+            return Ok(exit_code);
         }
     }
 }
