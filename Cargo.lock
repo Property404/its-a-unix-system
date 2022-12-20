@@ -510,8 +510,9 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vfs"
-version = "0.8.0"
-source = "git+https://github.com/Property404/rust-vfs?branch=master#d3766b0b74d71a4fb7673d37f243a09439a356a3"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ded573c92d7b32013bdab82676be59f56106895e837504568f32804980ec7868"
 
 [[package]]
 name = "walkdir"
