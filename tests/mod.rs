@@ -63,6 +63,23 @@ async fn integration_test_inner(tx: UnboundedSender<Command>) -> Result<()> {
     tester.run("sh -c 'echo -- ${2}'")?;
     tester.expect("echo -- ${2}")?;
 
+    // && and ||
+    tester.run("false || echo false")?;
+    tester.expect("false")?;
+    tester.run("true || echo butts")?;
+    tester.run("true && echo true")?;
+    tester.expect("true")?;
+    // Tests
+    tester.run("test a == a && echo yes")?;
+    tester.expect("yes")?;
+    tester.run("test a != a || echo no")?;
+    tester.expect("no")?;
+    tester.run("test ! a != a || echo alpha")?;
+    tester.run("test ! a != a && echo beta")?;
+    tester.expect("beta")?;
+    tester.run("test yes =~ y && echo yes")?;
+    tester.expect("yes")?;
+
     Ok(())
 }
 
