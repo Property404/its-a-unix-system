@@ -19,6 +19,7 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 ### Known bugs
 
 * Running `foo=bar echo ${foo}` will print `foo`'s old value
+* `[` cannot compare multiword values because of how variable substition works
 
 ## Example
 
