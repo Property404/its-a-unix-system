@@ -5,21 +5,19 @@ WebAssembly Unix terminal built with 🦀Rust🦀
 ## Features
 
 * Essential Unix commands (sh, ls, cp, mv, cat, cowsay, etc)
+* Basic Vi implementation
 * Pipes and file redirect
 * Variables and subshells
 * File system via [rust-vfs](https://github.com/manuel-woelker/rust-vfs)
 * Basic scripting support (try `sh example.sh`)
-* Basic GNU Readline-like features (key bindings, history, tab-complete)
-* Basic ANSI escape code support, including some colors
-
-### Not included (yet)
-
-* File editor
+* GNU Readline-like features (key bindings, history, tab-complete)
+* ANSI escape code support, including some colors
 
 ### Known bugs
 
 * Running `foo=bar echo ${foo}` will print `foo`'s old value
 * `[` cannot compare multiword values because of how variable substition works
+* No emoji support in `vi`
 
 ## Example
 

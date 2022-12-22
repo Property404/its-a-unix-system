@@ -10,6 +10,10 @@ const ESCAPE_ENUM = {
     CURSOR_RELATIVE: "CURSOR_RELATIVE",
     CLEAR_LINE: "CLEAR_LINE",
     CLEAR_TO_END: "CLEAR_TO_END",
+    ABS_POS: "ABS_POS",
+    POP_TOP: "POP_TOP",
+    POP_BOTTOM: "POP_BOTTOM",
+    PUSH_TOP: "PUSH_TOP",
 };
 const DIRECTION = {
     UP: "A",
@@ -23,6 +27,7 @@ const DIRECTION = {
 let style = "ct-normal";
 let esc_sequence = null;
 let cursorx = 0;
+let cursory = null;
 
 function get_pos_in_line(line, x) {
     let adj_span = null;
@@ -59,21 +64,25 @@ function get_pos_in_line(line, x) {
     return null;
 }
 
-function move_cursor_x(x) {
+function move_cursor(x, y) {
     if (x < 0) {
         return;
     }
+    if (y < 0) {
+        return;
+    }
     cursorx = x;
+    cursory = y;
     hidey_hole.appendChild(cursor);
 
-    const line = line_from_last(0);
+    const line = current_line();
     const span = get_pos_in_line(line, cursorx);
 
     line.insertBefore(cursor, span);
 }
 
 function match_escape(c) {
-    const MAX_SIZE = 5;
+    const MAX_SIZE = 7;
     esc_sequence += c;
 
     if (esc_sequence >= MAX_SIZE) {
@@ -104,6 +113,24 @@ function match_escape(c) {
     } else if ((result = /\[0K/.exec(esc_sequence))) {
         result = {
             type: ESCAPE_ENUM.CLEAR_TO_END
+        }
+    } else if ((result = /\[popt/.exec(esc_sequence))) {
+        result = {
+            type: ESCAPE_ENUM.POP_TOP
+        }
+    } else if ((result = /\[popb/.exec(esc_sequence))) {
+        result = {
+            type: ESCAPE_ENUM.POP_BOTTOM
+        }
+    } else if ((result = /\[pusht/.exec(esc_sequence))) {
+        result = {
+            type: ESCAPE_ENUM.PUSH_TOP
+        }
+    } else if ((result = /\[([0-9]+);([0-9]+)H/.exec(esc_sequence))) {
+        result = {
+            type: ESCAPE_ENUM.ABS_POS,
+            row: +result[1],
+            column: +result[2],
         }
     }
 
@@ -156,15 +183,21 @@ function js_term_write(str) {
                     cursorx += 1;
                 } else if (result.direction === DIRECTION.LEFT_ABS) {
                     cursorx = 0;
+                } else if (result.direction === DIRECTION.UP) {
+                    if (cursory > 0) {
+                        cursory -= 1;
+                    }
+                } else if (result.direction === DIRECTION.DOWN) {
+                    cursory += 1;
                 } else {
                     console.error("UNIMPLEMENTED ANSI CODE DIRECTION", result.direction);
                 }
             } else if (result.type == ESCAPE_ENUM.CLEAR) {
                 js_term_clear();
             } else if (result.type == ESCAPE_ENUM.CLEAR_LINE) {
-                terminal.lastChild?.replaceChildren();
+                current_line().replaceChildren();
             } else if (result.type == ESCAPE_ENUM.CLEAR_TO_END) {
-                move_cursor_x(cursorx);
+                move_cursor(cursorx, cursory);
                 const line = cursor.parentElement;
                 let element = cursor.nextSibling;
                 while (element !== null) {
@@ -172,48 +205,67 @@ function js_term_write(str) {
                     element = element.nextSibling;
                     line.removeChild(temp);
                 }
+            } else if (result.type == ESCAPE_ENUM.ABS_POS) {
+                cursory = result.row;
+                cursorx = result.column;
+            } else if (result.type == ESCAPE_ENUM.POP_TOP) {
+                hidey_hole.appendChild(cursor)
+                terminal.removeChild(terminal.firstChild);
+                move_cursor(cursorx, cursory);
+            } else if (result.type == ESCAPE_ENUM.POP_BOTTOM) {
+                hidey_hole.appendChild(cursor)
+                terminal.removeChild(terminal.lastChild);
+                move_cursor(cursorx, cursory);
+            } else if (result.type == ESCAPE_ENUM.PUSH_TOP) {
+                terminal.insertBefore(document.createElement("div"), terminal.firstChild);
             } else {
                 console.error("UNIMPLEMENTED ANSI CODE", result);
             }
         }
     }
     write_with_style(buffer);
-    move_cursor_x(cursorx);
+    move_cursor(cursorx, cursory);
 }
 
-function line_from_last(n) {
-    let latest_line = terminal.lastChild;
+function current_line() {
+    let line;
+    if (cursory === null) {
+        line = terminal.lastChild;
 
-    if (latest_line === null) {
-        latest_line = document.createElement("div");
-        terminal.appendChild(latest_line);
+        if (line === null) {
+            line = document.createElement("div");
+            terminal.appendChild(line);
+        }
+    } else {
+        line = line_from_top(cursory);
     }
 
-    if (n < 0) {
-        let sibling = latest_line;
-        while (n++ < 0) {
-            sibling = sibling.previousSibiling;
-            if (sibling == null) {
-                break;
-            }
-        }
-        if (sibling === null) {
-            sibling = terminal.firstChild;
-        }
-        return sibling;
+    if (line == null) {
+        throw new Error("NULL LINE");
     }
 
-    if (n > 0) {
-        while (n-- > 0) {
-            latest_line = document.createElement("span");
-            terminal.appendChild(latest_line);
-        }
-        return latest_line;
-    }
-
-    return latest_line;
+    return line;
 }
 
+function line_from_top(n) {
+    let line = terminal.firstChild;
+
+    if (line === null) {
+        line = document.createElement("div");
+        terminal.appendChild(line);
+    }
+
+    while (n > 0) {
+        line = line.nextSibling;
+        if (line === null) {
+            line = document.createElement("div");
+            terminal.appendChild(line);
+        }
+        n--;
+    }
+
+    return line;
+}
 
 function write_to_line(line, str) {
     let focus = null;
@@ -231,8 +283,14 @@ function write_to_line(line, str) {
     for (let i = 0; i < str.length; i++) {
         const c = str[i];
         if (c == '\n') {
-            const new_line = document.createElement("div");
-            terminal.insertBefore(new_line, line.nextSibling);
+            let new_line;
+            if (cursory === null) {
+                new_line = document.createElement("div");
+                terminal.insertBefore(new_line, line.nextSibling);
+            } else {
+                cursory++;
+                new_line = current_line();
+            }
             cursorx = 0;
             write_to_line(new_line, str.substr(i + 1));
             return;
@@ -264,14 +322,14 @@ function write_with_style(str) {
     if (str === "") {
         return;
     }
-    const latest_line = line_from_last(0);
+    const latest_line = current_line();
     write_to_line(latest_line, str);
     terminal.scrollTop = terminal.scrollHeight;
 }
 
 function js_term_clear() {
     terminal.innerHTML = "";
-    move_cursor_x(0);
+    move_cursor(0, null);
 }
 
 function js_term_backspace() {
@@ -286,5 +344,17 @@ function js_term_backspace() {
     if (latest_div.textContent === "") {
         latest_div.remove();
     }
-    move_cursor_x(cursorx - 1);
+    move_cursor(cursorx - 1, cursory);
+}
+
+// Not even remotely accurate, but at least it's usually less than the
+// actual screen height.
+function js_term_get_screen_height() {
+    function rem_to_pixels(rem) {
+        return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
+    }
+
+    const rem = rem_to_pixels(1);
+    const lines = Math.round((terminal.offsetHeight / rem) * 0.5);
+    return lines;
 }

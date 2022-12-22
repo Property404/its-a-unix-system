@@ -12,6 +12,13 @@ pub enum AnsiCode {
     Clear,
     ClearLine,
     ClearToEndOfLine,
+    AbsolutePosition(usize, usize),
+    /// Pop the top line. Faunix extension.
+    PopTop,
+    /// Pop the bottom line. Faunix extension.
+    PopBottom,
+    /// Add a new line to top. Faunix extension.
+    PushTop,
 }
 
 impl AnsiCode {
@@ -32,6 +39,15 @@ impl ToString for AnsiCode {
             AnsiCode::Clear => "\x1b[c".into(),
             AnsiCode::ClearLine => "\x1b[2K".into(),
             AnsiCode::ClearToEndOfLine => "\x1b[0K".into(),
+            AnsiCode::AbsolutePosition(row, column) => {
+                debug_assert!(row < &1000);
+                debug_assert!(column < &1000);
+                format!("\x1b[{row};{column}H")
+            }
+            // Pop the top line.
+            AnsiCode::PopTop => "\x1b[popt".into(),
+            AnsiCode::PopBottom => "\x1b[popb".into(),
+            AnsiCode::PushTop => "\x1b[pusht".into(),
         }
     }
 }

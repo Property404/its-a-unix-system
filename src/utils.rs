@@ -26,6 +26,7 @@ pub fn get_document() -> Result<Document> {
 extern "C" {
     pub fn js_term_write(s: &str);
     pub fn js_term_backspace();
+    pub fn js_term_get_screen_height() -> usize;
 }
 
 #[allow(unused)]
