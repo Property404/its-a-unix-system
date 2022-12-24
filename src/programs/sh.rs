@@ -543,6 +543,9 @@ struct Options {
     /// A command to run.
     #[arg(short, conflicts_with = "script")]
     command: Option<String>,
+    /// A script to source.
+    #[arg(short, conflicts_with = "script", conflicts_with = "command")]
+    source: Option<String>,
     /// A script to run.
     script: Option<String>,
 }
@@ -570,6 +573,15 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
     if let Some(command) = options.command {
         run_script(process, &command).await?;
         return Ok(ExitCode::SUCCESS);
+    }
+
+    if let Some(file_path) = options.source {
+        let mut script = String::new();
+        process
+            .get_path(&file_path)?
+            .open_file()?
+            .read_to_string(&mut script)?;
+        run_script(process, &script).await?;
     }
 
     let readline_history = FileBasedHistory::new(process.get_path(HISTORY_FILE)?);

@@ -11,8 +11,10 @@ use futures::{io::AsyncWriteExt, try_join};
 use process::Process;
 use wasm_bindgen::prelude::*;
 
+const PROFILE_PATH: &str = "/etc/profile";
 const HOME_PATH: &str = "/root";
-const DEFAULT_SEARCH_PATHS: &str = "/bin:/usr/bin";
+const BIN_PATHS: &str = "/bin:/usr/bin";
+const USER: &str = "root";
 
 async fn run() -> Result<()> {
     utils::set_panic_hook();
@@ -27,11 +29,11 @@ async fn run() -> Result<()> {
         env: Default::default(),
         signal_registrar,
         cwd: rootfs.join(HOME_PATH)?,
-        args: vec!["-sh".into()],
+        args: vec!["-sh".into(), "-s".into(), PROFILE_PATH.into()],
         do_exit_with: None,
     };
 
-    for (key, value) in [("PATH", DEFAULT_SEARCH_PATHS), ("HOME", HOME_PATH)] {
+    for (key, value) in [("USER", USER), ("HOME", HOME_PATH), ("PATH", BIN_PATHS)] {
         process.env.insert(key.into(), value.into());
     }
 
