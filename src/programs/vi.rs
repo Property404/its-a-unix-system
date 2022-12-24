@@ -188,6 +188,16 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             }
         } else if c == '$' {
             column = buffer.len();
+        } else if c == 'G' {
+            column = 0;
+            row = buffers.len() - 1;
+            reset = true;
+        } else if c == 'g' {
+            if stdin.get_char().await? == 'g' {
+                column = 0;
+                row = 0;
+                reset = true;
+            }
         } else if c == '0' || c == '^' {
             column = 0;
         } else if c == 'k' {
