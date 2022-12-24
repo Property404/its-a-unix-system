@@ -171,9 +171,17 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             row = offset;
         } else if c == 'L' {
             row = std::cmp::min(buffers.len() - 1, offset + height - 1);
+        } else if c == 'x' || c == 'r' {
+            if column < buffer.len() {
+                buffer.remove(column);
+                if c == 'r' {
+                    buffer.insert(column, stdin.get_char().await?);
+                }
+                *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
+            }
         } else if c == '$' {
             column = buffer.len();
-        } else if c == '0' {
+        } else if c == '0' || c == '^' {
             column = 0;
         } else if c == 'k' {
             row = row.saturating_sub(1);
