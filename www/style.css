@@ -22,7 +22,7 @@ html, body {
 }
 
 #terminal div {
-    min-height: 1rem;
+    min-height: 1.2rem;
 }
 
 #cursor {
