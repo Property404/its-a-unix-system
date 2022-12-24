@@ -5,6 +5,6 @@ echo "Would you like to see your fortune?"
 read -p '(y/n) > ' answer
 # `[` evaluates a conditional. In this case, we're checking if
 # the variable `answer` is "y".
-[ "${answer}" =~ "y" ] || echo Fine. 😡
+[ "${answer}" =~ "y" ] || echo -e "Fine. \u0001f621"
 # The `-s` flag selects a short fortune.
-[ "${answer}" =~ "y" ] && echo "Here is a 🐮 with your fortune" && fortune -s | cowsay
+[ "${answer}" =~ "y" ] && echo -e "Here is a \u0001f42e with your fortune" && fortune -s | cowsay

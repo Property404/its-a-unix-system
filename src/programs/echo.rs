@@ -75,6 +75,17 @@ fn unescape(escaped: &str) -> String {
                     }
                     continue;
                 }
+                'u' => {
+                    let mut value: u32 = 0;
+                    for _ in 0..8 {
+                        value *= 16;
+                        value += escaped.next().and_then(|c| c.to_digit(16)).unwrap_or(0);
+                    }
+                    if let Some(c) = char::from_u32(value) {
+                        unescaped.push(c);
+                    }
+                    continue;
+                }
                 x => x,
             };
             unescaped.push(c);
