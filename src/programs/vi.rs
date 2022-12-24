@@ -17,11 +17,15 @@ enum Mode {
 
 /// Visual file editor.
 ///
-/// Escape character is <esc> or ^D
+/// Press the 'i' key to go into "input mode"
+/// Press <esc> to go into "normal mode"
+///
+/// Use the arrow keys to navigate in either mode.
 ///
 /// Save and quit: <esc> :wq
 /// Quit without saving: <esc> :q
 #[derive(Parser)]
+#[command(verbatim_doc_comment)]
 struct Options {
     /// The file to edit.
     file: String,
