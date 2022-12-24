@@ -95,7 +95,14 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
         stdout.write_all(&AnsiCode::ClearLine.to_bytes())?;
         stdout.write_all(buffer.as_bytes())?;
         row = std::cmp::min(row, buffers.len());
-        column = std::cmp::min(column, buffer.len());
+        column = std::cmp::min(
+            column,
+            if mode == Mode::Normal {
+                buffer.len().saturating_sub(1)
+            } else {
+                buffer.len()
+            },
+        );
         stdout.write_all(&AnsiCode::AbsolutePosition(row - offset, column).to_bytes())?;
         stdout.flush()?;
         let c = stdin.get_char().await?;
