@@ -206,7 +206,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             } else {
                 stdout.write_all(&AnsiCode::Clear.to_bytes())?;
                 stdout.write_all(format!("Unknown command: {command}\n").as_bytes())?;
-                stdout.write_all(b"Press any key to continue")?;
+                stdout.write_all(b"Press any key to continue\n")?;
                 stdin.get_char().await?;
             }
 
