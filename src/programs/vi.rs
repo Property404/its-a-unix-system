@@ -41,9 +41,14 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
 
     let mut buffers: Vec<String> = {
         let mut contents = String::new();
-        let mut file = process.get_path(&options.file)?.open_file()?;
-        file.read_to_string(&mut contents)?;
-        contents.trim_end().split('\n').map(|s| s.into()).collect()
+        let file = process.get_path(&options.file)?;
+        if file.exists()? {
+            let mut file = file.open_file()?;
+            file.read_to_string(&mut contents)?;
+            contents.trim_end().split('\n').map(|s| s.into()).collect()
+        } else {
+            Vec::new()
+        }
     };
 
     stdout.write_all(&AnsiCode::Clear.to_bytes())?;
@@ -65,6 +70,10 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
 
     let mut reset = false;
     loop {
+        if buffers.is_empty() {
+            buffers.push(String::new());
+        }
+
         let mut buffer = buffers
             .get(row)
             .ok_or_else(|| anyhow!("no such row"))?
