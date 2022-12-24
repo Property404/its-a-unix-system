@@ -158,6 +158,9 @@ impl KeyboardTerminalReader {
                 echo(mode, &AnsiCode::CursorUp.to_string(), &mut cbuffer);
             } else if key == "ArrowDown" {
                 echo(mode, &AnsiCode::CursorDown.to_string(), &mut cbuffer);
+            } else if key == "Escape" {
+                // Double escape to disambiguate
+                echo(mode, "\x1b\x1b", &mut cbuffer);
             } else if key == "Enter" {
                 echo(mode, "\n", &mut cbuffer);
                 if mode == InputMode::Line {

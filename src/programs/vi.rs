@@ -5,7 +5,7 @@ use crate::{
     utils, AnsiCode, ControlChar,
 };
 use anyhow::{anyhow, Result};
-use ascii::AsciiChar;
+use ascii::{AsciiChar, ToAsciiChar};
 use clap::Parser;
 use std::io::{Read, Write};
 
@@ -17,10 +17,10 @@ enum Mode {
 
 /// Visual file editor.
 ///
-/// Escape character is ^D
+/// Escape character is <esc> or ^D
 ///
-/// Save and quit: ^D :wq
-/// Quit without saving: ^D :q
+/// Save and quit: <esc> :wq
+/// Quit without saving: <esc> :q
 #[derive(Parser)]
 struct Options {
     /// The file to edit.
@@ -88,8 +88,8 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
         let c = stdin.get_char().await?;
 
         if c == AsciiChar::ESC {
-            match stdin.get_char().await? {
-                '[' => match stdin.get_char().await? {
+            match stdin.get_char().await?.to_ascii_char()? {
+                AsciiChar::BracketOpen => match stdin.get_char().await? {
                     // Up/Down arrow
                     mode @ ('A' | 'B' | 'C' | 'D') => {
                         if mode == 'A' {
@@ -104,6 +104,12 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                     }
                     _ => continue,
                 },
+                AsciiChar::ESC => {
+                    if mode == Mode::Insert {
+                        column = column.saturating_sub(1);
+                        mode = Mode::Normal;
+                    }
+                }
                 _ => continue,
             }
         }
