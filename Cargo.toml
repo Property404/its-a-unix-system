@@ -23,6 +23,7 @@ getrandom = { version = "0.2.8", features = ["js"] }
 js-sys = "0.3.60"
 rand = "0.8.5"
 regex = "1.7.0"
+sedregex = "0.2.5"
 textwrap = "0.16.0"
 vfs = "0.9.0"
 wasm-bindgen = "0.2.83"
