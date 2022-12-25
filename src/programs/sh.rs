@@ -8,6 +8,7 @@ use crate::{
     streams,
 };
 use anyhow::{anyhow, bail, Result};
+use ascii::AsciiChar;
 use clap::Parser;
 use futures::{
     channel::oneshot,
@@ -649,11 +650,67 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
             Ok(suggestions)
         };
 
+        // User-specified prompt
+        let prompt = if let Some(ps1) = process.env.get("PS1") {
+            let mut prompt = String::new();
+            let mut backslash = false;
+            for c in ps1.chars() {
+                if backslash {
+                    match c {
+                        // PWD
+                        'w' => {
+                            let cwd = if process.cwd.is_root() {
+                                "/"
+                            } else {
+                                process.cwd.as_str()
+                            };
+                            prompt.push_str(cwd);
+                        }
+                        // Folder name
+                        'W' => {
+                            let cwd = if process.cwd.is_root() {
+                                "/".into()
+                            } else {
+                                process.cwd.filename()
+                            };
+                            prompt.push_str(&cwd);
+                        }
+                        // Backslash
+                        '\\' => {
+                            prompt.push('\\');
+                        }
+                        // Newline
+                        'n' => {
+                            prompt.push('\n');
+                        }
+                        // Carriage return
+                        'r' => {
+                            prompt.push('\r');
+                        }
+                        // Escape
+                        'e' => {
+                            prompt.push(AsciiChar::ESC.as_char());
+                        }
+                        _ => {}
+                    }
+                    backslash = false;
+                } else if c == '\\' {
+                    backslash = true;
+                } else {
+                    prompt.push(c);
+                }
+            }
+
+            prompt
+        } else {
+            String::from("$ ")
+        };
+
         let (abort_channel_tx, abort_channel_rx) = oneshot::channel();
         process.signal_registrar.unbounded_send(abort_channel_tx)?;
         let line: String = match await_abortable_future::<String, _>(
             abort_channel_rx,
-            readline.get_line("$ ", &mut stdin, &mut stdout, tab_completer),
+            readline.get_line(&prompt, &mut stdin, &mut stdout, tab_completer),
         )
         .await
         {
