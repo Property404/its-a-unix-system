@@ -58,7 +58,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
     let mut row = 0;
     let mut column = 0;
 
-    let mut readline = Readline::new(":".into(), NullHistory::default());
+    let mut readline = Readline::new(NullHistory::default());
 
     for (i, buffer) in buffers.iter().enumerate() {
         stdout.write_all(&AnsiCode::AbsolutePosition(i, column).to_bytes())?;
@@ -212,7 +212,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             // Get command
             stdout.write_all(&AnsiCode::AbsolutePosition(height, 0).to_bytes())?;
             let command = readline
-                .get_line(&mut stdin, &mut stdout, |_, _| Ok(Default::default()))
+                .get_line(":", &mut stdin, &mut stdout, |_, _| Ok(Default::default()))
                 .await?;
 
             if command == "w" || command == "wq" {

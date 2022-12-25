@@ -585,7 +585,7 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
     }
 
     let readline_history = FileBasedHistory::new(process.get_path(HISTORY_FILE)?);
-    let mut readline = Readline::new(String::from("$ "), readline_history);
+    let mut readline = Readline::new(readline_history);
 
     let bin_paths: Result<Vec<VfsPath>> = process
         .env
@@ -653,7 +653,7 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
         process.signal_registrar.unbounded_send(abort_channel_tx)?;
         let line: String = match await_abortable_future::<String, _>(
             abort_channel_rx,
-            readline.get_line(&mut stdin, &mut stdout, tab_completer),
+            readline.get_line("$ ", &mut stdin, &mut stdout, tab_completer),
         )
         .await
         {

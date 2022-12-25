@@ -117,10 +117,15 @@ pub async fn read(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
     let mut stdout = process.stdout.clone();
     let mut stdin = process.stdin.clone();
 
-    let mut readline = Readline::new(options.prompt.unwrap_or_default(), NullHistory::default());
+    let mut readline = Readline::new(NullHistory::default());
 
     let line = readline
-        .get_line(&mut stdin, &mut stdout, |_, _| Ok(Vec::new()))
+        .get_line(
+            &options.prompt.unwrap_or_default(),
+            &mut stdin,
+            &mut stdout,
+            |_, _| Ok(Vec::new()),
+        )
         .await?;
     process.env.insert(options.variable, line);
 

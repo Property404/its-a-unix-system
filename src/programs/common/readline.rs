@@ -78,18 +78,17 @@ impl History for NullHistory {
 
 /// A GNU Readline-like implementation.
 pub struct Readline<T: History> {
-    /// The prompt to show, e.g "$ "
-    prompt: String,
     history: T,
 }
 
 impl<T: History> Readline<T> {
-    pub fn new(prompt: String, history: T) -> Self {
-        Self { prompt, history }
+    pub fn new(history: T) -> Self {
+        Self { history }
     }
     /// Get next line.
     pub async fn get_line<F>(
         &mut self,
+        prompt: &str,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
         completer: F,
@@ -99,7 +98,7 @@ impl<T: History> Readline<T> {
     {
         stdin.set_mode(InputMode::Char).await?;
 
-        let result = self.get_line_inner(stdin, stdout, completer).await;
+        let result = self.get_line_inner(prompt, stdin, stdout, completer).await;
 
         stdin.set_mode(InputMode::Line).await?;
 
@@ -112,6 +111,7 @@ impl<T: History> Readline<T> {
 
     async fn get_line_inner<F>(
         &self,
+        prompt: &str,
         stdin: &mut InputStream,
         stdout: &mut OutputStream,
         completer: F,
@@ -125,7 +125,7 @@ impl<T: History> Readline<T> {
         buffers.push(String::new());
         let mut buffer_index = buffers.len() - 1;
 
-        stdout.write_all(self.prompt.as_bytes()).await?;
+        stdout.write_all(prompt.as_bytes()).await?;
         loop {
             let buffer = buffers
                 .get_mut(buffer_index)
@@ -240,7 +240,7 @@ impl<T: History> Readline<T> {
             // ^L - clear screen
             } else if c == ControlChar::L {
                 stdout.write_all(&AnsiCode::Clear.to_bytes()).await?;
-                stdout.write_all(self.prompt.as_bytes()).await?;
+                stdout.write_all(prompt.as_bytes()).await?;
                 move_cursor_right(stdout, cursor).await?;
             // ^U - kill until cursor
             } else if c == ControlChar::U {
@@ -276,7 +276,7 @@ impl<T: History> Readline<T> {
                         stdout.write_all(b" ").await?;
                     }
                     stdout.write_all(b"\n").await?;
-                    stdout.write_all(self.prompt.as_bytes()).await?;
+                    stdout.write_all(prompt.as_bytes()).await?;
                     move_cursor_right(stdout, cursor).await?;
                 }
 
