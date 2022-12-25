@@ -2,7 +2,7 @@ use crate::process::{ExitCode, Process};
 use anyhow::{bail, Result};
 use clap::Parser;
 use futures::AsyncReadExt;
-use std::io::Write;
+use std::{collections::HashSet, io::Write};
 
 /// Sort files or stdin.
 #[derive(Parser)]
@@ -10,6 +10,9 @@ struct Options {
     /// Sort in reverse order.
     #[arg(short, long)]
     reverse: bool,
+    /// Remove repeated lines.
+    #[arg(short, long)]
+    unique: bool,
     /// The files to concatenate and sort.
     files: Vec<String>,
 }
@@ -35,6 +38,11 @@ pub async fn sort(process: &mut Process) -> Result<ExitCode> {
     }
 
     let mut lines: Vec<&str> = contents.lines().collect();
+    if options.unique {
+        let set = lines.into_iter().collect::<HashSet<_>>();
+        lines = set.into_iter().collect();
+    }
+
     lines.sort();
 
     if options.reverse {
