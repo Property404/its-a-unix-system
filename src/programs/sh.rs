@@ -249,10 +249,6 @@ async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>
                         continue;
                     } else if c == '#' {
                         break;
-                    } else if c == '$' {
-                        // Extra 1 because we sub on beginning of loop
-                        ignore_quotes = 1 + parse_variable(process, &mut source).await?;
-                        continue;
                     } else if ['&', '|', '>', '<'].contains(&c) {
                         if !buffer.is_empty() {
                             tokens.push(BasicToken::Value(buffer.clone()));
@@ -305,10 +301,39 @@ async fn tokenize(process: &mut Process, source: &str) -> Result<Vec<BasicToken>
                         buffer.clear();
                         quote_level = QuoteType::None;
                         continue;
-                    } else if c == '$' {
-                        ignore_quotes = 1 + parse_variable(process, &mut source).await?;
-                        continue;
                     }
+                }
+            }
+
+            if quote_level == QuoteType::None || quote_level == QuoteType::Double {
+                // Subsitute home directory
+                if c == '~'
+                    && (last_char
+                        .map(|c| c.is_whitespace() || c == '"')
+                        .unwrap_or(true))
+                {
+                    let next_c = source.next();
+                    if let Some(next_c) = next_c {
+                        source.prepend(vec![next_c].into_iter());
+                    }
+                    if next_c
+                        .map(|c| c.is_whitespace() || c == '/' || c == '"')
+                        .unwrap_or(true)
+                    {
+                        source.prepend(
+                            process
+                                .env
+                                .get("HOME")
+                                .cloned()
+                                .unwrap_or_else(|| "~".into())
+                                .chars(),
+                        )
+                    }
+                    continue;
+                } else if c == '$' {
+                    // Extra 1 because we sub on beginning of loop
+                    ignore_quotes = 1 + parse_variable(process, &mut source).await?;
+                    continue;
                 }
             }
         };
