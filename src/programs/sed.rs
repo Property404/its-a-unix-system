@@ -17,7 +17,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn sed_inner<'a>(
+async fn sed_inner<'a>(
     stream: &mut InputStream,
     out: &mut OutputStream,
     pattern: &ReplaceCommand<'a>,

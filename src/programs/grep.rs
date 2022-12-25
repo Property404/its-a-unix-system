@@ -20,7 +20,7 @@ struct Options {
     invert_match: bool,
 }
 
-pub async fn grep_inner(
+async fn grep_inner(
     stream: &mut InputStream,
     out: &mut OutputStream,
     pattern: &Regex,
