@@ -11,6 +11,16 @@ async fn exec_external_program(
     command: &str,
 ) -> Result<Option<Result<ExitCode>>> {
     let root = process.cwd.root();
+
+    if command.starts_with('/') || command.starts_with("./") {
+        let mut contents = String::new();
+        process
+            .get_path(command)?
+            .open_file()?
+            .read_to_string(&mut contents)?;
+        return Ok(Some(sh::run_script(process, &contents).await));
+    }
+
     let paths = process
         .env
         .get("PATH")
