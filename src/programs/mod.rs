@@ -73,6 +73,6 @@ macro_rules! implement {
 }
 
 implement!(
-    cat, clear, cowsay, cp, echo, fortune, find, grep, head, ls, mkdir, mv, pwd, rev, rm, sed, sh,
-    sort, sponge, tail, tee, test, touch, vi, wc, whoami
+    cat, clear, cowsay, cp, echo, fortune, find, grep, head, ls, mkdir, mv, pwd, rev, rm, rmdir,
+    sed, sh, sort, sponge, tail, tee, test, touch, vi, wc, whoami
 );
