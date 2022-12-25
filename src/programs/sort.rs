@@ -7,6 +7,9 @@ use std::io::Write;
 /// Sort files or stdin.
 #[derive(Parser)]
 struct Options {
+    /// Sort in reverse order.
+    #[arg(short, long)]
+    reverse: bool,
     /// The files to concatenate and sort.
     files: Vec<String>,
 }
@@ -33,6 +36,10 @@ pub async fn sort(process: &mut Process) -> Result<ExitCode> {
 
     let mut lines: Vec<&str> = contents.lines().collect();
     lines.sort();
+
+    if options.reverse {
+        lines = lines.into_iter().rev().collect();
+    }
 
     for line in lines {
         process.stdout.write_all(line.as_bytes())?;
