@@ -378,6 +378,8 @@ fn dispatch(process: &mut Process, root: Token) -> BoxFuture<Result<ExitCode>> {
                     shell_commands::exit(process, args).await
                 } else if command == "read" {
                     shell_commands::read(process, args).await
+                } else if command == "source" || command == "." {
+                    shell_commands::source(process, args).await
                 } else if command == "true" {
                     Ok(ExitCode::SUCCESS)
                 } else if command == "false" {

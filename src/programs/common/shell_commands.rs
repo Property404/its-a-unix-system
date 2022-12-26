@@ -15,7 +15,7 @@ use clap::Parser;
 use futures::AsyncWriteExt;
 
 /// List of all internal shell commands.
-pub const COMMANDS: [&str; 5] = ["cd", "env", "read", "exit", "exec"];
+pub const COMMANDS: [&str; 6] = ["cd", "env", "read", "exit", "exec", "source"];
 
 /// Exit shell.
 pub async fn exit(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
@@ -55,6 +55,33 @@ pub async fn exec(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
 
     process.do_exit_with = Some(code);
     Ok(code)
+}
+
+pub async fn source(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+    /// Execute commands from file in current shell.
+    #[derive(Parser)]
+    struct Options {
+        /// The program to run.
+        file: String,
+        /// The arguments to pass
+        args: Vec<String>,
+    }
+    let options = Options::try_parse_from(args.iter())?;
+
+    let mut script = String::new();
+    process
+        .get_path(&options.file)?
+        .open_file()?
+        .read_to_string(&mut script)?;
+
+    let old_arguments = process.args.clone();
+    process.args = vec![options.file.clone()];
+    process.args.extend(options.args);
+
+    let result = programs::sh::run_script(process, &script).await;
+
+    process.args = old_arguments;
+    result
 }
 
 /// Change directory.
