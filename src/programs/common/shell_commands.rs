@@ -8,6 +8,7 @@ use crate::{
     programs::{
         self,
         common::readline::{NullHistory, Readline},
+        sh::ShellContext,
     },
 };
 use anyhow::{bail, Result};
@@ -15,7 +16,7 @@ use clap::Parser;
 use futures::AsyncWriteExt;
 
 /// List of all internal shell commands.
-pub const COMMANDS: [&str; 6] = ["cd", "env", "read", "exit", "exec", "source"];
+pub const COMMANDS: [&str; 7] = ["cd", "env", "export", "read", "exit", "exec", "source"];
 
 /// Exit shell.
 pub async fn exit(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
@@ -57,7 +58,11 @@ pub async fn exec(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
     Ok(code)
 }
 
-pub async fn source(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+pub async fn source(
+    ctx: &mut ShellContext,
+    process: &mut Process,
+    args: Vec<String>,
+) -> Result<ExitCode> {
     /// Execute commands from file in current shell.
     #[derive(Parser)]
     struct Options {
@@ -78,7 +83,7 @@ pub async fn source(process: &mut Process, args: Vec<String>) -> Result<ExitCode
     process.args = vec![options.file.clone()];
     process.args.extend(options.args);
 
-    let result = programs::sh::run_script(process, &script).await;
+    let result = programs::sh::run_script(ctx, process, &script).await;
 
     process.args = old_arguments;
     result
@@ -128,8 +133,50 @@ pub async fn env(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
     Ok(ExitCode::SUCCESS)
 }
 
+/// Mark variable to be used in environment.
+pub async fn export(
+    ctx: &mut ShellContext,
+    process: &mut Process,
+    args: Vec<String>,
+) -> Result<ExitCode> {
+    /// Display environmental variables.
+    #[derive(Parser)]
+    struct Options {
+        /// A variable and an optional value.
+        expressions: Vec<String>,
+    }
+
+    let options = Options::try_parse_from(args.iter())?;
+
+    for expression in options.expressions {
+        let (identifier, value) = if expression.contains('=') {
+            let (identifier, value) = expression
+                .split_once('=')
+                .expect("Bug: expected equals sign");
+            (identifier.into(), value.into())
+        } else {
+            let value = process
+                .env
+                .get(&expression)
+                .or_else(|| ctx.variables.get(&expression))
+                .cloned()
+                .unwrap_or_default();
+            (expression, value)
+        };
+
+        ctx.variables.insert(identifier.clone(), value.clone());
+        process.env.insert(identifier, value);
+    }
+
+    Ok(ExitCode::SUCCESS)
+}
+
 /// Display read user input and write to environmental variable.
-pub async fn read(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+pub async fn read(
+    ctx: &mut ShellContext,
+    process: &mut Process,
+    args: Vec<String>,
+) -> Result<ExitCode> {
     /// Write user input to a variable.
     #[derive(Parser)]
     struct Options {
@@ -154,7 +201,10 @@ pub async fn read(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
             |_, _| Ok(Vec::new()),
         )
         .await?;
-    process.env.insert(options.variable, line);
+    ctx.variables.insert(options.variable.clone(), line.clone());
+    if process.env.contains_key(&options.variable) {
+        process.env.insert(options.variable, line);
+    }
 
     Ok(ExitCode::SUCCESS)
 }

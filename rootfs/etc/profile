@@ -1,6 +1,6 @@
-EDITOR=vi
-VISUAL=vi
-PS1='\e[35m\W\e[0m $ '
+export EDITOR=vi
+export VISUAL=vi
+export PS1='\e[35m\W\e[0m $ '
 
 echo -e "Hello! Welcome to \x1b[31mFaunix\x1b[0m, the best fake Unix system https://dagans.dev has to offer."
 echo ""

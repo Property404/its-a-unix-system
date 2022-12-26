@@ -43,20 +43,20 @@ async fn integration_test_inner(tx: UnboundedSender<Command>) -> Result<()> {
     tester.run("rm a")?;
 
     // Environmental variables
-    tester.run("foo=bar")?;
+    tester.run("export foo=bar")?;
     tester.run("echo ${foo}${foo}")?;
     tester.expect("barbar")?;
-    tester.run("foo=foo${foo}")?;
+    tester.run("export foo=foo${foo}")?;
     tester.run("echo ${foo}")?;
     tester.expect("foobar")?;
     // Make sure quoting works as expected
-    tester.run("foo=\"y'all\tare ugly\"")?;
+    tester.run("export foo=\"y'all\tare ugly\"")?;
     tester.run("echo \"${foo}\"")?;
     tester.expect("y'all\tare ugly")?;
     tester.run("echo ${foo}")?;
     tester.expect("y'all are ugly")?;
     // ...and with double quotes inside
-    tester.run("foo='quote \"'")?;
+    tester.run("export foo='quote \"'")?;
     tester.run("echo \"${foo}\"")?;
     tester.expect("quote \"")?;
     // And that we don't recurse shell vars

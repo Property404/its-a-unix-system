@@ -18,7 +18,8 @@ async fn exec_external_program(
             .get_path(command)?
             .open_file()?
             .read_to_string(&mut contents)?;
-        return Ok(Some(sh::run_script(process, &contents).await));
+        let mut ctx = sh::ShellContext::default();
+        return Ok(Some(sh::run_script(&mut ctx, process, &contents).await));
     }
 
     let paths = process
@@ -34,7 +35,8 @@ async fn exec_external_program(
             if entity.is_file()? && entity.filename() == command {
                 let mut contents = String::new();
                 entity.open_file()?.read_to_string(&mut contents)?;
-                return Ok(Some(sh::run_script(process, &contents).await));
+                let mut ctx = sh::ShellContext::default();
+                return Ok(Some(sh::run_script(&mut ctx, process, &contents).await));
             }
         }
     }
