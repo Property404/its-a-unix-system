@@ -592,6 +592,7 @@ pub fn run_script<'a>(
     }
     .boxed()
 }
+
 /// Unix shell.
 #[derive(Parser)]
 struct Options {
