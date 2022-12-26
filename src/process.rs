@@ -16,8 +16,6 @@ pub struct Process {
     // Currently we just have the ^C signal, but we might add more
     // later. I don't know, I'm tired
     pub signal_registrar: UnboundedSender<oneshot::Sender<()>>,
-    // If this is Some, exit
-    pub do_exit_with: Option<ExitCode>,
 }
 
 impl Process {

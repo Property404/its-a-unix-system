@@ -19,17 +19,25 @@ use futures::AsyncWriteExt;
 pub const COMMANDS: [&str; 7] = ["cd", "env", "export", "read", "exit", "exec", "source"];
 
 /// Exit shell.
-pub async fn exit(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+pub async fn exit(
+    ctx: &mut ShellContext,
+    _process: &mut Process,
+    args: Vec<String>,
+) -> Result<ExitCode> {
     /// Exit shell.
     #[derive(Parser)]
     struct Options {}
     let _options = Options::try_parse_from(args.iter())?;
     let code = ExitCode::SUCCESS;
-    process.do_exit_with = Some(code);
+    ctx.do_exit_with = Some(code);
     Ok(code)
 }
 
-pub async fn exec(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
+pub async fn exec(
+    ctx: &mut ShellContext,
+    process: &mut Process,
+    args: Vec<String>,
+) -> Result<ExitCode> {
     /// Replace shell with program.
     #[derive(Parser)]
     struct Options {
@@ -54,7 +62,7 @@ pub async fn exec(process: &mut Process, args: Vec<String>) -> Result<ExitCode> 
         bail!("Cannot find {}", options.command);
     };
 
-    process.do_exit_with = Some(code);
+    ctx.do_exit_with = Some(code);
     Ok(code)
 }
 

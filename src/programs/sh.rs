@@ -26,6 +26,7 @@ const HISTORY_FILE: &str = "/etc/.sh_history";
 #[derive(Default, Clone)]
 pub struct ShellContext {
     pub variables: HashMap<String, String>,
+    pub do_exit_with: Option<ExitCode>,
 }
 
 enum AbortableResult<T> {
@@ -396,9 +397,9 @@ fn dispatch<'a>(
                 } else if command == "env" {
                     shell_commands::env(process, args).await
                 } else if command == "exec" {
-                    shell_commands::exec(process, args).await
+                    shell_commands::exec(ctx, process, args).await
                 } else if command == "exit" {
-                    shell_commands::exit(process, args).await
+                    shell_commands::exit(ctx, process, args).await
                 } else if command == "export" {
                     shell_commands::export(ctx, process, args).await
                 } else if command == "read" {
@@ -583,7 +584,7 @@ pub fn run_script<'a>(
             result = await_abortable_future(abort_channel_rx, dispatch(ctx, process, root_token))
                 .await
                 .fail_if_aborted()?;
-            if let Some(exit_code) = process.do_exit_with {
+            if let Some(exit_code) = ctx.do_exit_with {
                 return Ok(exit_code);
             }
         }
@@ -790,7 +791,7 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
             process.stderr.write_all(b"\n").await?;
         }
 
-        if let Some(exit_code) = process.do_exit_with {
+        if let Some(exit_code) = ctx.do_exit_with {
             return Ok(exit_code);
         }
     }
@@ -813,7 +814,6 @@ mod test {
             stdout,
             signal_registrar,
             cwd,
-            do_exit_with: None,
             args: Vec::new(),
             env: Default::default(),
         }

@@ -30,7 +30,6 @@ async fn run() -> Result<()> {
         signal_registrar,
         cwd: rootfs.join(HOME_PATH)?,
         args: vec!["-sh".into(), "-s".into(), PROFILE_PATH.into()],
-        do_exit_with: None,
     };
 
     for (key, value) in [("USER", USER), ("HOME", HOME_PATH), ("PATH", BIN_PATHS)] {
