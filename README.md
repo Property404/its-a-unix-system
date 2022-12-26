@@ -41,7 +41,7 @@ Wow what a great fortune
 ## Running locally
 
 * `cargo install wasm-pack`
-* `wasm-pack build`
+* `wasm-pack build --no-default-features`
 * `cd www`
 * `npm install`
 * `npm run start`
