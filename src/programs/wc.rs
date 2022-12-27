@@ -51,7 +51,13 @@ async fn wc_inner<'a>(
 }
 
 pub async fn wc(process: &mut Process) -> Result<ExitCode> {
-    let options = Options::try_parse_from(process.args.iter())?;
+    let mut options = Options::try_parse_from(process.args.iter())?;
+
+    if !(options.bytes || options.words || options.lines) {
+        options.bytes = true;
+        options.words = true;
+        options.lines = true;
+    }
 
     if options.files.is_empty() {
         let mut stdin = process.stdin.clone();
