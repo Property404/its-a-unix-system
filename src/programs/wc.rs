@@ -33,7 +33,7 @@ async fn wc_inner<'a>(
     let mut bytes = 0;
     while let Ok(line) = stream.get_line().await {
         bytes += line.len();
-        words += line.matches(' ').count();
+        words += line.split_whitespace().count();
         lines += 1;
     }
     let mut stats = Vec::new();
