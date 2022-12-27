@@ -4,6 +4,7 @@
 //! itself.
 
 use crate::{
+    filesystem::vfs_path_to_str,
     process::{ExitCode, Process},
     programs::{
         self,
@@ -108,9 +109,25 @@ pub async fn cd(process: &mut Process, args: Vec<String>) -> Result<ExitCode> {
     let options = Options::try_parse_from(args.iter())?;
 
     if let Some(directory) = options.directory {
-        let new_path = process.get_path(directory)?;
+        // `cd -` changes to the previous directory
+        let new_path = if directory == "-" {
+            if let Some(old_pwd) = process.env.get("OLDPWD") {
+                process.get_path(old_pwd)?
+            } else {
+                bail!("OLDPWD not set");
+            }
+        } else {
+            process.get_path(directory)?
+        };
+
         if new_path.is_dir()? {
+            process
+                .env
+                .insert("OLDPWD".into(), vfs_path_to_str(&process.cwd).into());
             process.cwd = new_path;
+            process
+                .env
+                .insert("PWD".into(), vfs_path_to_str(&process.cwd).into());
         } else {
             process.stderr.write_all(b"cd: ").await?;
             process

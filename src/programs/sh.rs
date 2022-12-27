@@ -1,4 +1,5 @@
 use crate::{
+    filesystem,
     process::{ExitCode, Process},
     programs::common::{
         extendable_iterator::ExtendableIterator,
@@ -716,11 +717,7 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
                     match c {
                         // PWD
                         'w' => {
-                            let cwd = if process.cwd.is_root() {
-                                "/"
-                            } else {
-                                process.cwd.as_str()
-                            };
+                            let cwd = filesystem::vfs_path_to_str(&process.cwd);
                             prompt.push_str(cwd);
                         }
                         // Folder name

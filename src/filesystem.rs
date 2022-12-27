@@ -10,6 +10,16 @@ pub fn get_root() -> Result<VfsPath> {
     Ok(path)
 }
 
+/// Convert VfsPath to str
+pub fn vfs_path_to_str(path: &VfsPath) -> &str {
+    let path = path.as_str();
+    if path.is_empty() {
+        "/"
+    } else {
+        path
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
