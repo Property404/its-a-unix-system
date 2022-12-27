@@ -274,6 +274,15 @@ async fn tokenize(
                             }
                         }
                         break;
+                    } else if c == '\\' {
+                        if let Some(next) = source.next() {
+                            if next != '\n' {
+                                buffer.push(next);
+                            }
+                        } else {
+                            break;
+                        }
+                        continue;
                     } else if ['&', '|', '>', '<', ';'].contains(&c) {
                         if !buffer.is_empty() {
                             tokens.push(BasicToken::Value(buffer.clone()));

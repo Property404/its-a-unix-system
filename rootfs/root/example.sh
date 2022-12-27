@@ -7,4 +7,6 @@ read -p '(y/n) > ' answer
 # the variable `answer` is "y".
 [ "${answer}" =~ "y" ] || echo -e "Fine. \u0001f621"
 # The `-s` flag selects a short fortune.
-[ "${answer}" =~ "y" ] && echo -e "Here is a \u0001f42e with your fortune" && fortune -s | cowsay
+[ "${answer}" =~ "y" ] && \
+    echo -e "Here is a \u0001f42e with your fortune" && \
+    fortune -s | cowsay
