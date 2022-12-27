@@ -27,9 +27,13 @@ pub async fn exit(
 ) -> Result<ExitCode> {
     /// Exit shell.
     #[derive(Parser)]
-    struct Options {}
-    let _options = Options::try_parse_from(args.iter())?;
-    let code = ExitCode::SUCCESS;
+    struct Options {
+        /// The exit status.
+        status: Option<u8>,
+    }
+
+    let options = Options::try_parse_from(args.iter())?;
+    let code = options.status.map(ExitCode::from).unwrap_or_default();
     ctx.do_exit_with = Some(code);
     Ok(code)
 }

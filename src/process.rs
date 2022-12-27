@@ -32,11 +32,22 @@ impl Process {
 }
 
 /// Value returned from a Process.
+#[repr(u8)]
 #[derive(Copy, Clone, Default, PartialEq, Eq)]
 pub enum ExitCode {
     #[default]
     Success,
     Failure(NonZeroU8),
+}
+
+impl From<u8> for ExitCode {
+    fn from(other: u8) -> Self {
+        match other {
+            0 => ExitCode::SUCCESS,
+            // Panic not possible because we've already matched for zero.
+            code => ExitCode::Failure(NonZeroU8::new(code).expect("BUG: Invalid failure code")),
+        }
+    }
 }
 
 impl ExitCode {
