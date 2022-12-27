@@ -18,6 +18,9 @@ struct Options {
     /// Select non-matching lines.
     #[arg(short = 'v', long)]
     invert_match: bool,
+    /// Ignore case.
+    #[arg(short, long)]
+    ignore_case: bool,
 }
 
 async fn grep_inner(
@@ -38,7 +41,12 @@ async fn grep_inner(
 
 pub async fn grep(process: &mut Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
-    let pattern = Regex::new(&options.pattern)?;
+    let pattern = if options.ignore_case {
+        format!("(?i){}", options.pattern)
+    } else {
+        options.pattern
+    };
+    let pattern = Regex::new(&pattern)?;
 
     if options.files.is_empty() {
         let mut stdin = process.stdin.clone();
