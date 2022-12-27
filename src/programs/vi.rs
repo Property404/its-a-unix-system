@@ -208,6 +208,25 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             row += 1;
         } else if c == 'l' && column < buffer.len() {
             column += 1;
+        // Move forward one word
+        } else if c == 'w' || c == 'W' {
+            if column == buffer.len().saturating_sub(1) {
+                if row < buffers.len().saturating_sub(1) {
+                    column = 0;
+                    row += 1;
+                }
+            } else {
+                let mut hit_delim = false;
+                for letter in buffer[column..].chars() {
+                    let is_delim = letter.is_whitespace();
+                    if is_delim {
+                        hit_delim = true
+                    } else if hit_delim {
+                        break;
+                    }
+                    column += 1;
+                }
+            }
         } else if c == ':' {
             // Get command
             stdout.write_all(&AnsiCode::AbsolutePosition(height, 0).to_bytes())?;
