@@ -229,12 +229,11 @@ async fn parse_variable(
 async fn tokenize(
     ctx: &mut ShellContext,
     process: &mut Process,
-    source: &str,
+    source: &mut ExtendableIterator<char>,
 ) -> Result<Vec<BasicToken>> {
     let mut quote_level = QuoteType::None;
     let mut tokens = Vec::new();
     let mut buffer = String::new();
-    let mut source = ExtendableIterator::new(source.chars());
     // We don't consider quote changes or start of variables when we're inside the result of a
     // variable/subshell
     let mut ignore_quotes: usize = 0;
@@ -252,6 +251,9 @@ async fn tokenize(
                 tokens.push(BasicToken::Value(buffer.clone()));
                 buffer.clear();
             }
+            if c == '\n' && ignore_quotes == 0 {
+                break;
+            }
             continue;
         }
 
@@ -265,14 +267,21 @@ async fn tokenize(
                         quote_level = QuoteType::Double;
                         continue;
                     } else if c == '#' {
+                        loop {
+                            let next = source.next();
+                            if next.is_none() || next == Some('\n') {
+                                break;
+                            }
+                        }
                         break;
-                    } else if ['&', '|', '>', '<'].contains(&c) {
+                    } else if ['&', '|', '>', '<', ';'].contains(&c) {
                         if !buffer.is_empty() {
                             tokens.push(BasicToken::Value(buffer.clone()));
                             buffer.clear();
                         }
-
-                        if c == '|' {
+                        if c == ';' {
+                            break;
+                        } else if c == '|' {
                             if last_char == Some('|') {
                                 if !matches!(tokens.pop(), Some(BasicToken::Pipe)) {
                                     bail!("Syntax error: Unexpected pipe");
@@ -349,7 +358,7 @@ async fn tokenize(
                     continue;
                 } else if c == '$' {
                     // Extra 1 because we sub on beginning of loop
-                    ignore_quotes = 1 + parse_variable(ctx, process, &mut source).await?;
+                    ignore_quotes = 1 + parse_variable(ctx, process, source).await?;
                     continue;
                 }
             }
@@ -568,12 +577,10 @@ pub fn run_script<'a>(
 ) -> BoxFuture<'a, Result<ExitCode>> {
     async {
         let mut result = ExitCode::SUCCESS;
-        let lines = source.split('\n');
-        for line in lines {
-            if line.trim().is_empty() {
-                continue;
-            }
-            let tokens = tokenize(ctx, process, line).await?;
+        let mut it = ExtendableIterator::new(source.chars());
+
+        while !it.is_empty() {
+            let tokens = tokenize(ctx, process, &mut it).await?;
             if tokens.is_empty() {
                 continue;
             }
@@ -825,7 +832,13 @@ mod test {
         process.env.insert("bar".into(), "BAR".into());
         process.env.insert("baz".into(), "BAZ".into());
         let source = "echo ${foo} ${bar}${baz}";
-        let tokens = tokenize(&mut ctx, &mut process, source).await.unwrap();
+        let tokens = tokenize(
+            &mut ctx,
+            &mut process,
+            &mut ExtendableIterator::new(source.chars()),
+        )
+        .await
+        .unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("FOO".into()),
@@ -839,7 +852,13 @@ mod test {
         let mut ctx = Default::default();
         let mut process = make_process();
         let source = "echo\thi '|'   there | cowsay";
-        let tokens = tokenize(&mut ctx, &mut process, source).await.unwrap();
+        let tokens = tokenize(
+            &mut ctx,
+            &mut process,
+            &mut ExtendableIterator::new(source.chars()),
+        )
+        .await
+        .unwrap();
         let expected = vec![
             BasicToken::Value("echo".into()),
             BasicToken::Value("hi".into()),
@@ -856,7 +875,13 @@ mod test {
         let mut process = make_process();
         let mut ctx = Default::default();
         let source = "fortune >> waa";
-        let tokens = tokenize(&mut ctx, &mut process, source).await.unwrap();
+        let tokens = tokenize(
+            &mut ctx,
+            &mut process,
+            &mut ExtendableIterator::new(source.chars()),
+        )
+        .await
+        .unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: true },
@@ -865,7 +890,13 @@ mod test {
         assert_eq!(tokens, expected);
 
         let source = "fortune > waa";
-        let tokens = tokenize(&mut ctx, &mut process, source).await.unwrap();
+        let tokens = tokenize(
+            &mut ctx,
+            &mut process,
+            &mut ExtendableIterator::new(source.chars()),
+        )
+        .await
+        .unwrap();
         let expected = vec![
             BasicToken::Value("fortune".into()),
             BasicToken::FileRedirectOut { append: false },

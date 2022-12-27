@@ -22,6 +22,11 @@ impl<T: Sized> ExtendableIterator<T> {
             self.0.push_front(item)
         }
     }
+
+    /// Check if iterator is empty.
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 impl<T: Sized> Iterator for ExtendableIterator<T> {

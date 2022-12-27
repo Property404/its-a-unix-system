@@ -80,6 +80,10 @@ async fn integration_test_inner(tx: UnboundedSender<Command>) -> Result<()> {
     tester.run("test yes =~ y && echo yes")?;
     tester.expect("yes")?;
 
+    // Semicolons
+    tester.run("echo -n hello;echo ' world'")?;
+    tester.expect("hello world")?;
+
     Ok(())
 }
 
