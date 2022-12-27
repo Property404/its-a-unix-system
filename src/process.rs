@@ -50,6 +50,15 @@ impl From<u8> for ExitCode {
     }
 }
 
+impl From<ExitCode> for u8 {
+    fn from(other: ExitCode) -> Self {
+        match other {
+            ExitCode::SUCCESS => 0,
+            ExitCode::Failure(code) => code.get(),
+        }
+    }
+}
+
 impl ExitCode {
     pub const FAILURE: Self = unsafe { ExitCode::Failure(NonZeroU8::new_unchecked(1)) };
     pub const SUCCESS: Self = ExitCode::Success;
