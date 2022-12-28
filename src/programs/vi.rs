@@ -204,6 +204,9 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                 .find(target)
                 .map(|x| x + 1)
                 .unwrap_or(0);
+        } else if c == 'F' {
+            let target = stdin.get_char().await?;
+            column = buffer[0..column].rfind(target).unwrap_or(column);
         } else if c == '0' || c == '^' {
             column = 0;
         } else if c == 'k' {
