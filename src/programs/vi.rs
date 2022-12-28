@@ -203,13 +203,26 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             }
         } else if c == 'f' {
             let target = stdin.get_char().await?;
-            column += buffer[column + 1..]
-                .find(target)
-                .map(|x| x + 1)
-                .unwrap_or(0);
+            if column < buffer.len() {
+                column += buffer[column + 1..]
+                    .find(target)
+                    .map(|x| x + 1)
+                    .unwrap_or(0);
+            }
         } else if c == 'F' {
             let target = stdin.get_char().await?;
             column = buffer[0..column].rfind(target).unwrap_or(column);
+        } else if c == 'o' {
+            column = 0;
+            row = std::cmp::min(buffers.len(), row + 1);
+            buffers.insert(row, String::new());
+            mode = Mode::Insert;
+            reset = true;
+        } else if c == 'O' {
+            column = 0;
+            buffers.insert(row, String::new());
+            mode = Mode::Insert;
+            reset = true;
         } else if c == '0' || c == '^' {
             column = 0;
         } else if c == 'k' {
