@@ -198,6 +198,12 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                 row = 0;
                 reset = true;
             }
+        } else if c == 'f' {
+            let target = stdin.get_char().await?;
+            column += buffer[column + 1..]
+                .find(target)
+                .map(|x| x + 1)
+                .unwrap_or(0);
         } else if c == '0' || c == '^' {
             column = 0;
         } else if c == 'k' {
