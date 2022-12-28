@@ -178,13 +178,16 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             row = offset;
         } else if c == 'L' {
             row = std::cmp::min(buffers.len() - 1, offset + height - 1);
-        } else if c == 'x' || c == 'r' {
+        } else if c == 'x' || c == 'r' || c == 's' {
             if column < buffer.len() {
                 buffer.remove(column);
                 if c == 'r' {
                     buffer.insert(column, stdin.get_char().await?);
                 }
                 *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
+            }
+            if c == 's' {
+                mode = Mode::Insert;
             }
         } else if c == '$' {
             column = buffer.len();
