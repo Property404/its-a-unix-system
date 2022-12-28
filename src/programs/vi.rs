@@ -166,8 +166,11 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                 column += 1;
                 *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
             }
-        } else if c == 'i' {
+        } else if c == 'i' || c == 'I' {
             mode = Mode::Insert;
+            if c == 'I' {
+                column = 0;
+            }
         } else if c == 'a' {
             mode = Mode::Insert;
             column = std::cmp::min(buffer.len(), column + 1);
