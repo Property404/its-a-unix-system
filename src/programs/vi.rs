@@ -212,14 +212,18 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
         } else if c == 'F' {
             let target = stdin.get_char().await?;
             column = buffer[0..column].rfind(target).unwrap_or(column);
-        } else if c == 'o' {
-            column = 0;
-            row = std::cmp::min(buffers.len(), row + 1);
-            buffers.insert(row, String::new());
-            mode = Mode::Insert;
+        } else if c == 'd' {
+            let next = stdin.get_char().await?;
+            if next == 'd' {
+                buffers.remove(row);
+                row = std::cmp::min(row, buffers.len().saturating_sub(1));
+            }
             reset = true;
-        } else if c == 'O' {
+        } else if c == 'o' || c == 'O' {
             column = 0;
+            if c == 'o' {
+                row = std::cmp::min(buffers.len(), row + 1);
+            }
             buffers.insert(row, String::new());
             mode = Mode::Insert;
             reset = true;
