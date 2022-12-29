@@ -1,7 +1,7 @@
 use crate::{
     process::{ExitCode, Process},
     programs::common::readline::{NullHistory, Readline},
-    streams::InputMode,
+    streams::{InputMode, InputStream, OutputStream},
     utils, AnsiCode, ControlChar,
 };
 use anyhow::{anyhow, Result};
@@ -13,6 +13,14 @@ use std::io::{Read, Write};
 enum Mode {
     Insert,
     Normal,
+}
+
+async fn error(stdin: &mut InputStream, stdout: &mut OutputStream, message: &str) -> Result<()> {
+    stdout.write_all(&AnsiCode::Clear.to_bytes())?;
+    stdout.write_all(message.as_bytes())?;
+    stdout.write_all(b"\n\nPress any key to continue\n")?;
+    stdin.get_char().await?;
+    Ok(())
 }
 
 /// Visual file editor.
@@ -28,20 +36,20 @@ enum Mode {
 #[command(verbatim_doc_comment)]
 struct Options {
     /// The file to edit.
-    file: String,
+    file: Option<String>,
 }
 
 pub async fn vi(process: &mut Process) -> Result<ExitCode> {
     let height = utils::js_term_get_screen_height();
-    let options = Options::try_parse_from(&process.args)?;
+    let mut options = Options::try_parse_from(&process.args)?;
 
     let mut stdin = process.stdin.clone();
     stdin.set_mode(InputMode::Char).await?;
     let mut stdout = process.stdout.clone();
 
-    let mut buffers: Vec<String> = {
+    let mut buffers: Vec<String> = if let Some(file) = &options.file {
         let mut contents = String::new();
-        let file = process.get_path(&options.file)?;
+        let file = process.get_path(file)?;
         if file.exists()? {
             let mut file = file.open_file()?;
             file.read_to_string(&mut contents)?;
@@ -49,6 +57,8 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
         } else {
             Vec::new()
         }
+    } else {
+        Vec::new()
     };
 
     stdout.write_all(&AnsiCode::Clear.to_bytes())?;
@@ -283,35 +293,56 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                 }
             }
         } else if c == ':' {
+            reset = true;
+
             // Get command
             stdout.write_all(&AnsiCode::AbsolutePosition(height, 0).to_bytes())?;
             let command = readline
                 .get_line(":", &mut stdin, &mut stdout, |_, _| Ok(Default::default()))
                 .await?;
+            stdin.set_mode(InputMode::Char).await?;
+            let command: Vec<_> = command.split_whitespace().collect();
 
-            if command == "w" || command == "wq" {
+            if command.is_empty() {
+                /* Do nothing */
+            } else if "write".starts_with(command[0]) || command[0] == "wq" {
+                // Set file name if non exists yet.
+                if options.file.is_none() {
+                    if let Some(name) = command.get(1) {
+                        options.file = Some(name.to_string());
+                    } else {
+                        error(&mut stdin, &mut stdout, "No file name").await?;
+                        continue;
+                    }
+                }
+                let file_to_save = command
+                    .get(1)
+                    .map(|s| String::from(*s))
+                    .or_else(|| options.file.clone())
+                    .expect("BUG: file name should have been set in previous line");
+
                 // save
                 let contents = buffers.join("\n") + "\n";
-                let mut file = process.get_path(&options.file)?.create_file()?;
+                let mut file = process.get_path(&file_to_save)?.create_file()?;
                 file.write_all(contents.as_bytes())?;
 
-                if command == "wq" {
+                if command[0] == "wq" {
                     break;
                 }
-            } else if command == "q" {
-                break;
-            } else if command.is_empty() {
-                /* Do nothing */
+            } else if "quit".starts_with(command[0]) {
+                if command.len() > 1 {
+                    error(&mut stdin, &mut stdout, "Unexpected arguments").await?;
+                } else {
+                    break;
+                }
             } else {
-                stdout.write_all(&AnsiCode::Clear.to_bytes())?;
-                stdout.write_all(format!("Unknown command: {command}\n").as_bytes())?;
-                stdout.write_all(b"Press any key to continue\n")?;
-                stdin.get_char().await?;
+                error(
+                    &mut stdin,
+                    &mut stdout,
+                    format!("Unknown command: {}", command[0]).as_str(),
+                )
+                .await?;
             }
-
-            // Reset
-            reset = true;
-            stdin.set_mode(InputMode::Char).await?;
         }
 
         while row < offset {
