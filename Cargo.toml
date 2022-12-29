@@ -1,5 +1,5 @@
 [package]
-name = "faux-unix-system"
+name = "its-a-unix-system"
 description = "A unix terminal for your website"
 version = "0.1.0"
 authors = ["Property404 <git@dagans.dev>"]

@@ -104,29 +104,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "faux-unix-system"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "ascii",
- "clap",
- "console_error_panic_hook",
- "futures",
- "futures-test",
- "getrandom",
- "js-sys",
- "rand",
- "regex",
- "sedregex",
- "textwrap",
- "vfs",
- "walkdir",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
 name = "futures"
 version = "0.3.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -259,6 +236,29 @@ name = "heck"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2540771e65fc8cb83cd6e8a237f70c319bd5c29f78ed1084ba5d50eeac86f7f9"
+
+[[package]]
+name = "its-a-unix-system"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "ascii",
+ "clap",
+ "console_error_panic_hook",
+ "futures",
+ "futures-test",
+ "getrandom",
+ "js-sys",
+ "rand",
+ "regex",
+ "sedregex",
+ "textwrap",
+ "vfs",
+ "walkdir",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
 
 [[package]]
 name = "js-sys"

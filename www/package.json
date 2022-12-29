@@ -31,8 +31,8 @@
   "devDependencies": {
     "copy-webpack-plugin": "^5.0.0",
     "eslint": "^8.29.0",
-    "faux-unix-system": "file:../pkg",
     "hello-wasm-pack": "^0.1.0",
+    "its-a-unix-system": "file:../pkg",
     "js-beautify": "^1.14.7",
     "webpack": "^4.29.3",
     "webpack-cli": "^3.1.0",

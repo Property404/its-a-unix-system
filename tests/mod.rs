@@ -1,6 +1,6 @@
 //! Integration tests.
 use anyhow::Result;
-use faux_unix_system::{filesystem, process::Process, programs, streams};
+use its_a_unix_system::{filesystem, process::Process, programs, streams};
 use futures::{
     channel::mpsc::{self, UnboundedSender},
     stream::StreamExt,
