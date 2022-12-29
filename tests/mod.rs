@@ -1,11 +1,11 @@
 //! Integration tests.
 use anyhow::Result;
-use its_a_unix_system::{filesystem, process::Process, programs, streams};
 use futures::{
     channel::mpsc::{self, UnboundedSender},
     stream::StreamExt,
     try_join,
 };
+use its_a_unix_system::{filesystem, process::Process, programs, streams};
 
 #[derive(PartialEq, Eq)]
 enum Command {

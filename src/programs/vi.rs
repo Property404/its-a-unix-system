@@ -134,7 +134,11 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             }
         }
 
-        if mode == Mode::Insert {
+        if c == ControlChar::A {
+            column = 0
+        } else if c == ControlChar::E {
+            column = buffer.len();
+        } else if mode == Mode::Insert {
             if c == AsciiChar::BackSpace {
                 if column > 0 {
                     column -= 1;
