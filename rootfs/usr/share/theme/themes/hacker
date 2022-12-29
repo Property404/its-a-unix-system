@@ -1,0 +1,8 @@
+#terminal {
+    color: #0f0;
+}
+
+.ct-magenta,.ct-red,.ct-blue,.ct-green,.ct-cyan {
+    font-weight: bold;
+    color: #0f0;
+}

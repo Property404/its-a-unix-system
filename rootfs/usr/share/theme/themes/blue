@@ -1,0 +1,16 @@
+#terminal {
+    background-color: #aaf;
+    color: #002
+}
+
+.ct-blue {
+    color: #00f;
+}
+
+.ct-magenta {
+    color: darkblue;
+}
+
+.ct-red {
+    color: darkred;
+}
