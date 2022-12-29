@@ -4,8 +4,5 @@ export PS1='\e[35m\W\e[0m $ '
 
 echo -e "Hello! Welcome to \x1b[31mFaunix\x1b[0m, the best fake Unix system https://dagans.dev has to offer."
 echo ""
-echo "To see available commands, press <tab>."
-echo "To see help for a command, use the `--help` or `-h` arguments."
-echo ""
-echo "To contribute: https://github.com/Property404/its-a-unix-system"
+help
 echo ""

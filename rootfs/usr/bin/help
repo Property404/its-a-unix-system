@@ -1,0 +1,8 @@
+#!sh
+echo "To see available commands, press <tab>.
+To see help for a command, use the `--help` or `-h` arguments.
+
+To contribute: https://github.com/Property404/its-a-unix-system"
+
+test -- "${1}" =~ "." && \
+    echo -e "\nThere are no arguments for the `help` command itself"
