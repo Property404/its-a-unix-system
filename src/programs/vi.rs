@@ -323,7 +323,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
 
                 // save
                 let contents = buffers.join("\n") + "\n";
-                let mut file = process.get_path(&file_to_save)?.create_file()?;
+                let mut file = process.get_path(file_to_save)?.create_file()?;
                 file.write_all(contents.as_bytes())?;
 
                 if command[0] == "wq" {
