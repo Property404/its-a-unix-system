@@ -704,7 +704,11 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
                 }
             }
 
-            if word.starts_with('/') || word.starts_with("./") || word.starts_with("../") {
+            if word.starts_with('/')
+                || word.starts_with("./")
+                || word.starts_with("../")
+                || word.starts_with("~/")
+            {
                 skip_path_completion = false;
             }
 
@@ -718,25 +722,31 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
                 } else {
                     ("", word)
                 };
-                let path = process.get_path(path_str)?;
 
-                for entity in path.read_dir()? {
-                    let filename = entity.filename();
-                    if filename.starts_with(file) {
-                        let mut suggestion = if path_str.is_empty() {
-                            filename
-                        } else if path_str == "/" {
-                            format!("/{filename}")
-                        } else {
-                            format!("{path_str}/{filename}")
-                        };
+                let Some(home) = process.env.get("HOME") else {
+                    bail!("No ${{HOME}} environmental variable");
+                };
+                let path = process.get_path(path_str.replace('~', home))?;
 
-                        if entity.is_file()? {
-                            suggestion.push(' ');
-                        } else {
-                            suggestion.push('/');
+                if path.exists()? {
+                    for entity in path.read_dir()? {
+                        let filename = entity.filename();
+                        if filename.starts_with(file) {
+                            let mut suggestion = if path_str.is_empty() {
+                                filename
+                            } else if path_str == "/" {
+                                format!("/{filename}")
+                            } else {
+                                format!("{path_str}/{filename}")
+                            };
+
+                            if entity.is_file()? {
+                                suggestion.push(' ');
+                            } else {
+                                suggestion.push('/');
+                            }
+                            suggestions.push(suggestion);
                         }
-                        suggestions.push(suggestion);
                     }
                 }
             }
