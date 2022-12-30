@@ -175,7 +175,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                 buffers.insert(row, buffer[column..].into());
                 column = 0;
                 reset = true;
-            } else if !c.is_control() {
+            } else if !c.is_control() || c == '\t' {
                 buffer.insert(column, c);
                 column += 1;
                 *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
