@@ -38,13 +38,25 @@ $ cat < file
 Wow what a great fortune
 ```
 
-## Running locally
+## Building and Serving for Development
+
+* `cargo install wasm-pack`
+* `wasm-pack build --dev`
+* `cd www`
+* `npm install`
+* `npm run start`
+
+App will be served on port 8080
+
+## Building for Release
 
 * `cargo install wasm-pack`
 * `wasm-pack build --no-default-features`
 * `cd www`
 * `npm install`
-* `npm run start`
+* `npm run build`
+
+Build will be in `www/dist/`
 
 ## License
 
