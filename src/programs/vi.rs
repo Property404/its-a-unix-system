@@ -246,6 +246,13 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             reset = true;
         } else if c == '0' || c == '^' {
             column = 0;
+        } else if c == AsciiChar::BackSpace {
+            if column > 0 {
+                column -= 1;
+            } else if row > 0 {
+                row -= 1;
+                column = usize::MAX;
+            }
         } else if c == 'k' {
             row = row.saturating_sub(1);
         } else if c == 'h' {
