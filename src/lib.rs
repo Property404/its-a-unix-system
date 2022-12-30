@@ -38,7 +38,17 @@ async fn run() -> Result<()> {
 
     try_join!(backend.run(), async {
         // We can clear the loading screen now.
-        utils::js_term_clear();
+        process
+            .stdout
+            .write_all(&AnsiCode::Clear.to_bytes())
+            .await?;
+
+        // Warn if we're on a development build
+        #[cfg(debug_assertions)]
+        process
+            .stdout
+            .write_all(b"\x1b[33m[WARN: this is a dev build]\x1b[0m\n")
+            .await?;
 
         loop {
             let mut child = process.clone();
