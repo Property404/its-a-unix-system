@@ -7,8 +7,11 @@ module.exports = {
         path: path.resolve(__dirname, "dist"),
         filename: "bootstrap.js",
     },
-    mode: "development",
+    mode: "production",
     plugins: [
         new CopyWebpackPlugin(['index.html', 'term.js', 'style.css'])
     ],
+    performance: {
+        maxAssetSize: 5000000,
+    }
 };
