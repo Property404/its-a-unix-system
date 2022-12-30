@@ -676,11 +676,13 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
             let word = &section[start..];
             let words: Vec<&str> = section.split_whitespace().collect();
             let mut suggestions = Vec::new();
+            let mut skip_path_completion = false;
 
             // Commands occur at start of line, or after pipes
             if (words.is_empty() || !section.ends_with(' '))
-                && (words.len() < 2 || ["|", "&&", "||"].contains(&words[words.len() - 2]))
+                && (words.len() < 2 || ["|", "&&", "||", ";"].contains(&words[words.len() - 2]))
             {
+                skip_path_completion = true;
                 // External(as in, not part of the shell) commands.
                 for path in bin_paths.clone() {
                     for command in path.read_dir()? {
@@ -700,7 +702,14 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
                         suggestions.push(command);
                     }
                 }
-            } else {
+            }
+
+            if word.starts_with('/') || word.starts_with("./") || word.starts_with("../") {
+                skip_path_completion = false;
+            }
+
+            // Path completion
+            if !skip_path_completion {
                 let (path, file) = if let Some(slash) = word.rfind('/') {
                     (&word[0..slash], &word[slash + 1..])
                 } else {
