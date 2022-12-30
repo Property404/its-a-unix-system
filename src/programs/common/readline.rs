@@ -253,8 +253,37 @@ impl<T: History> Readline<T> {
                 let section = &buffer[0..cursor];
                 let word = &section[start..];
                 let mut suggestions = completer(section.into(), start)?;
-                suggestions.sort();
 
+                // When there is a common prefix, fill that in as a suggestion.
+                if suggestions.len() > 1 {
+                    let mut shortest_word = "";
+                    for word in &suggestions {
+                        if shortest_word.is_empty() || word.len() < shortest_word.len() {
+                            shortest_word = word;
+                        }
+                    }
+                    let mut common_prefix = shortest_word.to_string();
+
+                    while !common_prefix.is_empty() {
+                        let mut do_break = true;
+                        for word in &suggestions {
+                            if !word.starts_with(&common_prefix) {
+                                do_break = false;
+                                common_prefix.pop();
+                            }
+                        }
+
+                        if do_break {
+                            break;
+                        }
+                    }
+
+                    if !common_prefix.is_empty() && common_prefix != word {
+                        suggestions = vec![common_prefix];
+                    }
+                }
+
+                suggestions.sort();
                 if suggestions.is_empty() {
                     skip_refresh = true;
                     continue;
