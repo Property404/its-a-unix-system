@@ -710,17 +710,28 @@ pub async fn sh(process: &mut Process) -> Result<ExitCode> {
 
             // Path completion
             if !skip_path_completion {
-                let (path, file) = if let Some(slash) = word.rfind('/') {
-                    (&word[0..slash], &word[slash + 1..])
+                let (path_str, file) = if let Some(slash) = word.rfind('/') {
+                    (
+                        if slash == 0 { "/" } else { &word[0..slash] },
+                        &word[slash + 1..],
+                    )
                 } else {
                     ("", word)
                 };
-                let path = process.get_path(path)?;
+                let path = process.get_path(path_str)?;
 
-                for dir in path.read_dir()? {
-                    if dir.filename().starts_with(file) {
-                        let mut suggestion = dir.as_str().to_string();
-                        if dir.is_file()? {
+                for entity in path.read_dir()? {
+                    let filename = entity.filename();
+                    if filename.starts_with(file) {
+                        let mut suggestion = if path_str.is_empty() {
+                            filename
+                        } else if path_str == "/" {
+                            format!("/{filename}")
+                        } else {
+                            format!("{path_str}/{filename}")
+                        };
+
+                        if entity.is_file()? {
                             suggestion.push(' ');
                         } else {
                             suggestion.push('/');
