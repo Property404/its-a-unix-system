@@ -37,6 +37,9 @@ async fn run() -> Result<()> {
     }
 
     try_join!(backend.run(), async {
+        // We can clear the loading screen now.
+        utils::js_term_clear();
+
         loop {
             let mut child = process.clone();
             programs::exec_program(&mut child, "sh").await?;
