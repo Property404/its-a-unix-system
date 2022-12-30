@@ -168,7 +168,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             } else if c == ControlChar::D {
                 column = column.saturating_sub(1);
                 mode = Mode::Normal;
-            } else if c == AsciiChar::LineFeed {
+            } else if c == AsciiChar::LineFeed || c == AsciiChar::CarriageReturn {
                 *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? =
                     buffer[0..column].into();
                 row += 1;
