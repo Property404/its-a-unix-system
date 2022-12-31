@@ -15,6 +15,11 @@ enum Mode {
     Normal,
 }
 
+enum Clipboard {
+    Line(String),
+    Text(String),
+}
+
 async fn error(stdin: &mut InputStream, stdout: &mut OutputStream, message: &str) -> Result<()> {
     stdout.write_all(&AnsiCode::Clear.to_bytes())?;
     stdout.write_all(message.as_bytes())?;
@@ -67,7 +72,8 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
     let mut offset = 0;
     let mut row = 0;
     let mut column = 0;
-
+    let mut reset = false;
+    let mut clipboard = Clipboard::Text(String::new());
     let mut readline = Readline::new(NullHistory::default());
 
     for (i, buffer) in buffers.iter().enumerate() {
@@ -78,7 +84,6 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
         }
     }
 
-    let mut reset = false;
     loop {
         if buffers.is_empty() {
             buffers.push(String::new());
@@ -197,9 +202,11 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
             row = std::cmp::min(buffers.len() - 1, offset + height - 1);
         } else if c == 'x' || c == 'r' || c == 's' {
             if column < buffer.len() {
-                buffer.remove(column);
+                let removed_char = buffer.remove(column);
                 if c == 'r' {
                     buffer.insert(column, stdin.get_char().await?);
+                } else {
+                    clipboard = Clipboard::Text(removed_char.to_string());
                 }
                 *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
             }
@@ -232,10 +239,37 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
         } else if c == 'd' {
             let next = stdin.get_char().await?;
             if next == 'd' {
+                clipboard = Clipboard::Line(buffer);
                 buffers.remove(row);
                 row = std::cmp::min(row, buffers.len().saturating_sub(1));
             }
             reset = true;
+        } else if c == 'y' {
+            let next = stdin.get_char().await?;
+            if next == 'y' {
+                clipboard = Clipboard::Line(buffer);
+            }
+        } else if c == 'p' || c == 'P' {
+            match &clipboard {
+                Clipboard::Line(contents) => {
+                    column = 0;
+                    if c == 'p' {
+                        row = std::cmp::min(buffers.len(), row + 1);
+                    }
+                    buffers.insert(row, contents.clone());
+                    reset = true;
+                }
+                Clipboard::Text(contents) => {
+                    if c == 'P' {
+                        buffer.insert_str(column, contents.as_str());
+                        column += contents.len().saturating_sub(1);
+                    } else {
+                        buffer.insert_str(column + 1, contents.as_str());
+                        column += contents.len();
+                    }
+                    *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
+                }
+            }
         } else if c == 'o' || c == 'O' {
             column = 0;
             if c == 'o' {
