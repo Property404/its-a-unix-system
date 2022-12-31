@@ -224,6 +224,11 @@ impl<T: History> Readline<T> {
                     move_cursor_left(stdout, 1).await?;
                 }
                 cursor = cursor.saturating_sub(1);
+            // ^D - delete character under cursor
+            } else if c == ControlChar::D {
+                if cursor < buffer.len() {
+                    buffer.remove(cursor);
+                }
             // ^E - move cursor to end of line
             } else if c == ControlChar::E {
                 move_cursor_right(stdout, buffer.len() - cursor).await?;
