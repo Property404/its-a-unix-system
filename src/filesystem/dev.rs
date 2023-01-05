@@ -32,18 +32,24 @@ impl DeviceFS {
         Ok(self
             .devices
             .get(path)
-            .ok_or_else(|| VfsErrorKind::FileNotFound)?
+            .ok_or(VfsErrorKind::FileNotFound)?
             .clone_box())
     }
 }
 
 impl FileSystem for DeviceFS {
     fn read_dir(&self, path: &str) -> VfsResult<Box<dyn Iterator<Item = String> + Send>> {
+        #[allow(clippy::needless_collect)]
         let entries: Vec<_> = self
             .devices
             .iter()
-            .map(|tuple| (tuple.0.clone()))
-            .filter(|a| a.starts_with(path))
+            .filter_map(|tuple| {
+                if tuple.0.starts_with(path) {
+                    Some(tuple.0.clone())
+                } else {
+                    None
+                }
+            })
             .collect();
 
         Ok(Box::new(entries.into_iter()))
