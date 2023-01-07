@@ -1,7 +1,7 @@
 # This is a comment. You won't see it
 
 echo "Would you like to see your fortune?"
-# `read` read user input to a new variable `answer`
+# `read` reads user input to a new variable `answer`
 read -p '(y/n) > ' answer
 # `[` evaluates a conditional. In this case, we're checking if
 # the variable `answer` is "y".
