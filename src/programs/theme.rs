@@ -12,6 +12,7 @@ const THEMES_DIR: &str = "/usr/share/theme/themes";
 ///
 /// Use without arguments to see available themes.
 #[derive(Parser)]
+#[command(verbatim_doc_comment)]
 struct Options {
     /// The theme to switch to.
     theme: Option<String>,
