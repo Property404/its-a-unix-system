@@ -287,6 +287,16 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
                 row -= 1;
                 column = usize::MAX;
             }
+        } else if c == ' ' {
+            if column < buffer.len().saturating_sub(1) {
+                column += 1;
+            } else if row < buffers.len().saturating_sub(1) {
+                row += 1;
+                column = 0;
+            }
+        } else if c == 'D' {
+            buffer = buffer[0..column].to_string();
+            *buffers.get_mut(row).ok_or_else(|| anyhow!("No such row"))? = buffer;
         } else if c == 'k' {
             row = row.saturating_sub(1);
         } else if c == 'h' {
