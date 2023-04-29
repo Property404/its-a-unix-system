@@ -188,7 +188,7 @@ mod test {
 
     impl TerminalWriter for MockTerminalWriter {
         fn send(&mut self, content: &str) -> Result<()> {
-            self.content += content.into();
+            self.content += content;
             Ok(())
         }
         fn shutdown(&mut self) -> Result<()> {
@@ -202,9 +202,9 @@ mod test {
         let (mut stream, mut backend) = OutputStream::from_writer(writer);
 
         try_join!(backend.run(), async move {
-            stream.write("Hello World!".as_bytes()).await?;
+            let _ = stream.write("Hello World!".as_bytes()).await?;
             stream.flush().await?;
-            stream.write("\nGoodbye\n".as_bytes()).await?;
+            let _ = stream.write("\nGoodbye\n".as_bytes()).await?;
             stream.shutdown().await?;
             Ok(())
         })
