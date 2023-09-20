@@ -220,7 +220,7 @@ pub async fn read(
     let mut stdout = process.stdout.clone();
     let mut stdin = process.stdin.clone();
 
-    let mut readline = Readline::new(NullHistory::default());
+    let mut readline = Readline::new(NullHistory);
 
     let line = readline
         .get_line(

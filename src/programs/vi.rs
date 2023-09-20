@@ -74,7 +74,7 @@ pub async fn vi(process: &mut Process) -> Result<ExitCode> {
     let mut column = 0;
     let mut reset = false;
     let mut clipboard = Clipboard::Text(String::new());
-    let mut readline = Readline::new(NullHistory::default());
+    let mut readline = Readline::new(NullHistory);
 
     for (i, buffer) in buffers.iter().enumerate() {
         stdout.write_all(&AnsiCode::AbsolutePosition(i, column).to_bytes())?;
