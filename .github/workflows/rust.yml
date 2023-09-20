@@ -14,31 +14,20 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        rust: [stable, beta]
+        os: [ubuntu-latest]
+        rust: [stable]
 
     steps:
-      - uses: actions/checkout@v2
-
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.rust }}
-          override: true
-          components: rustfmt, clippy
-
+      - uses: actions/checkout@v4
       - name: Run Clippy
         run: cargo clippy --all-features -- -D warnings
-
       - name: Run tests
         run: cargo test --verbose
-
       - name: Build
         run: cargo build --verbose
-
       - name: Lint
         run: |
           cargo fmt -- $(find src -name '*.rs') --check && \
           cargo fmt -- --check
-
       - name: Build documentation
         run: cargo doc --verbose
