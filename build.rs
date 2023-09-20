@@ -81,11 +81,10 @@ pub fn populate_rootfs(path: &mut VfsPath) -> Result<()> {{"
             )?;
             if !contents.is_empty() {
                 writeln!(&mut file, "file.write_all(&[")?;
-                let contents: String = contents
-                    .iter()
-                    .map(|byte| format!("0x{byte:02x},"))
-                    .collect();
-                writeln!(&mut file, "{contents}])?;")?;
+                for byte in contents.iter() {
+                    write!(&mut file, "0x{byte:02x},")?;
+                }
+                writeln!(&mut file, "])?;")?;
             }
         }
     }

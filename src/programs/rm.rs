@@ -16,7 +16,7 @@ struct Options {
     files: Vec<String>,
 }
 
-pub async fn rm(process: &mut Process) -> Result<ExitCode> {
+pub async fn rm(process: &Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
 
     for file in options.files {

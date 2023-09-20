@@ -10,7 +10,7 @@ struct Options {
     dirs: Vec<String>,
 }
 
-pub async fn rmdir(process: &mut Process) -> Result<ExitCode> {
+pub async fn rmdir(process: &Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
 
     for dir in options.dirs {

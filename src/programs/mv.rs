@@ -11,7 +11,7 @@ struct Options {
     dest: String,
 }
 
-pub async fn mv(process: &mut Process) -> Result<ExitCode> {
+pub async fn mv(process: &Process) -> Result<ExitCode> {
     let options = Options::try_parse_from(process.args.iter())?;
     let src = process.get_path(&options.src)?;
     if !src.exists()? {

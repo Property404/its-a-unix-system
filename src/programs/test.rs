@@ -14,7 +14,7 @@ struct Options {
     arg2: String,
 }
 
-pub async fn test(process: &mut Process) -> Result<ExitCode> {
+pub async fn test(process: &Process) -> Result<ExitCode> {
     if process.args.is_empty() {
         bail!("No arguments");
     }

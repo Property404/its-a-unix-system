@@ -44,7 +44,7 @@ struct Options {
     file: Option<String>,
 }
 
-pub async fn vi(process: &mut Process) -> Result<ExitCode> {
+pub async fn vi(process: &Process) -> Result<ExitCode> {
     let height = utils::js_term_get_screen_height();
     let mut options = Options::try_parse_from(&process.args)?;
 
