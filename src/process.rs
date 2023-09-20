@@ -60,7 +60,7 @@ impl From<ExitCode> for u8 {
 }
 
 impl ExitCode {
-    pub const FAILURE: Self = unsafe { ExitCode::Failure(NonZeroU8::new_unchecked(1)) };
+    pub const FAILURE: Self = ExitCode::Failure(NonZeroU8::MIN);
     pub const SUCCESS: Self = ExitCode::Success;
 
     /// Returns true if this is a succcess variant.
