@@ -57,7 +57,7 @@ fn unescape(escaped: &str) -> String {
     let mut escaped = escaped.chars();
     let mut unescaped = String::new();
     loop {
-        let Some(c) = escaped.next() else {break};
+        let Some(c) = escaped.next() else { break };
         if c == '\\' {
             let c = match escaped.next().unwrap_or('\\') {
                 'e' => AsciiChar::ESC.as_char(),

@@ -243,7 +243,9 @@ async fn tokenize(
     loop {
         let last_char = c;
         c = source.next();
-        let Some(c) = c else {break;};
+        let Some(c) = c else {
+            break;
+        };
         ignore_quotes = ignore_quotes.saturating_sub(1);
 
         if quote_level == QuoteType::None && [' ', '\n', '\t'].contains(&c) {
