@@ -385,7 +385,7 @@ async fn tokenize(
     }
 
     // Assignment is kind of weird
-    if let Some(BasicToken::Value(value)) = &tokens.get(0) {
+    if let Some(BasicToken::Value(value)) = &tokens.first() {
         if value.contains('=') {
             let (identifier, value) = value.split_once('=').expect("Bug: expected equals sign");
 

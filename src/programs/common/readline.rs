@@ -306,7 +306,7 @@ impl<T: History> Readline<T> {
                     // Display suggestions
                     stdout.write_all(b"\n").await?;
                     for suggestion in suggestions {
-                        stdout.write_all(suggestion.as_str().as_bytes()).await?;
+                        stdout.write_all(suggestion.as_bytes()).await?;
                         stdout.write_all(b" ").await?;
                     }
                     stdout.write_all(b"\n").await?;
