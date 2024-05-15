@@ -1,4 +1,4 @@
-use std::string::ToString;
+use std::{fmt, string::ToString};
 
 #[allow(unused)]
 #[derive(Copy, Clone)]
@@ -28,27 +28,31 @@ impl AnsiCode {
     }
 }
 
-impl ToString for AnsiCode {
-    fn to_string(&self) -> String {
-        match self {
-            AnsiCode::CursorUp => "\x1b[A".into(),
-            AnsiCode::CursorDown => "\x1b[B".into(),
-            AnsiCode::CursorRight => "\x1b[C".into(),
-            AnsiCode::CursorLeft => "\x1b[D".into(),
-            AnsiCode::CursorResetColumn => "\x1b[G".into(),
-            AnsiCode::Clear => "\x1b[c".into(),
-            AnsiCode::ClearLine => "\x1b[2K".into(),
-            AnsiCode::ClearToEndOfLine => "\x1b[0K".into(),
-            AnsiCode::AbsolutePosition(row, column) => {
-                debug_assert!(row < &1000);
-                debug_assert!(column < &1000);
-                format!("\x1b[{row};{column}H")
+impl fmt::Display for AnsiCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "{}",
+            match self {
+                AnsiCode::CursorUp => "\x1b[A".into(),
+                AnsiCode::CursorDown => "\x1b[B".into(),
+                AnsiCode::CursorRight => "\x1b[C".into(),
+                AnsiCode::CursorLeft => "\x1b[D".into(),
+                AnsiCode::CursorResetColumn => "\x1b[G".into(),
+                AnsiCode::Clear => "\x1b[c".into(),
+                AnsiCode::ClearLine => "\x1b[2K".into(),
+                AnsiCode::ClearToEndOfLine => "\x1b[0K".into(),
+                AnsiCode::AbsolutePosition(row, column) => {
+                    debug_assert!(row < &1000);
+                    debug_assert!(column < &1000);
+                    format!("\x1b[{row};{column}H")
+                }
+                // Pop the top line.
+                AnsiCode::PopTop => "\x1b[popt".into(),
+                AnsiCode::PopBottom => "\x1b[popb".into(),
+                AnsiCode::PushTop => "\x1b[pusht".into(),
             }
-            // Pop the top line.
-            AnsiCode::PopTop => "\x1b[popt".into(),
-            AnsiCode::PopBottom => "\x1b[popb".into(),
-            AnsiCode::PushTop => "\x1b[pusht".into(),
-        }
+        )
     }
 }
 

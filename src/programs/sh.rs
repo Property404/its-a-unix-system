@@ -433,7 +433,7 @@ fn dispatch<'a>(
                     Ok(ExitCode::FAILURE)
                 } else {
                     let mut process = process.clone();
-                    process.args = args.clone();
+                    process.args.clone_from(&args);
                     match crate::programs::exec_program(&mut process, &command).await? {
                         None => {
                             process
