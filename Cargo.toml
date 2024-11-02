@@ -40,4 +40,3 @@ futures-test = "0.3"
 [profile.release]
 opt-level = "s"
 strip = true
-lto = true
