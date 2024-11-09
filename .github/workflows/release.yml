@@ -23,7 +23,7 @@ jobs:
           npm run build
           popd
       - name: Tar dist
-        run: tar czf its-a-unix-system.tar.gz dist/
+        run: tar czf its-a-unix-system.tar.gz www/dist/
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/create-release@v1
