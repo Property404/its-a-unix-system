@@ -12,6 +12,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -27,24 +29,7 @@ jobs:
       - name: Tar dist
         run: tar -C www/ -czf its-a-unix-system.tar.gz dist
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/create-release@v1
-        id: create_release
+        uses: ncipollo/release-action@v1
         with:
-          draft: false
-          prerelease: false
-          release_name: ${{ github.ref }}
-          tag_name: ${{ github.ref }}
+          artifacts: its-a-unix-system.tar.gz
           body: Look at me I'm a release haha
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Upload Release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./its-a-unix-system.tar.gz
-          asset_name: its-a-unix-system.tar.gz
-          asset_content_type: application/gzip
