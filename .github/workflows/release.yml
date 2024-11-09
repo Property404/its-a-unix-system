@@ -31,8 +31,8 @@ jobs:
         uses: actions/create-release@v1
         id: create_release
         with:
-          draft: true
-          prerelease: true
+          draft: false
+          prerelease: false
           release_name: ${{ github.ref }}
           tag_name: ${{ github.ref }}
           body: Look at me I'm a release haha
