@@ -1,7 +1,5 @@
 ---
 name: Release CI
-## TODO: set-output is deprecated and will be removed soon
-## Best to find a workflow that's actually updated
 
 # yamllint disable-line rule:truthy
 on:
