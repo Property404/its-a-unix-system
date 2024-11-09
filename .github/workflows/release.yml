@@ -1,10 +1,11 @@
 ---
 name: Release CI
 
+# yamllint disable-line rule:truthy
 on:
-  branches: main
-  tags:
-    - '*'
+  push:
+    tags:
+      - '*'
 
 jobs:
   build:
